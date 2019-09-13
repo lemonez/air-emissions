@@ -11,3 +11,4 @@ junk.py
 *.csv
 *.xls*
 
+*notes.text
