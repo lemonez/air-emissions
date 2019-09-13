@@ -10,5 +10,4 @@ Data/Annual/NotParsed/*
 junk.py
 *.csv
 *.xls*
-
-*notes.text
+*notes.txt
