@@ -1,0 +1,13 @@
+# ignore the following
+
+*.pdf
+*.pyc
+*.ipynb
+.ipynb_checkpoints
+Output*/
+Output*
+Data/Annual/NotParsed/*
+junk.py
+*.csv
+*.xls*
+
