@@ -232,7 +232,7 @@ class AnnualParser(object):
             print('Writing output to files.')
         
             for df in frames:        
-                outname = (cf.out_dir+cf.outpath_prefix+str(year_to_parse)+'_'
+                outname = (cf.out_dir_child+str(year_to_parse)+'_'
                            +df.name+'{}.csv')
                 if not toxics:
                     outname = outname.format('')

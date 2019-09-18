@@ -10,6 +10,14 @@ def main():
 
     # unpack arguments as dict and push back to config module
     args_dict = vars(get_args())
+    
+    #if args_dict['log_suffix'] != '':
+    #    args_dict['log_suffix'] = '_' + args_dict['log_suffix']
+    if not args_dict['out_dir'].endswith('/'):
+        args_dict['out_dir'] += '/'
+    if not args_dict['out_dir_child'].endswith('/'):
+        args_dict['out_dir_child'] += '/'
+    args_dict['out_dir_child'] = args_dict['out_dir'] + args_dict['out_dir_child']
 
     update_config(cf, args_dict)
 
@@ -19,6 +27,12 @@ def main():
             print('    {:<22}: {}'.format(k,v))
         print('\n')
 
+    # ensure output directories exist
+    for dir in [cf.out_dir, cf.out_dir_child, cf.log_dir]:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+            print('Created directory \''+dir+'\' for output files.\n')
+
     if cf.view_config:
         import sys
         sys.exit(0)
@@ -27,12 +41,6 @@ def main():
     start_time_seconds = time.time()
     start_time = time.strftime("%H:%M:%S")
     print('\n'+start_time+'\tmodule \''+__name__+'\' began running.')
-    
-    # ensure output directories exist
-    for dir in [cf.out_dir, cf.log_dir]:
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-            print('Created directory \''+dir+'\' for output files.\n')
     
     # parse input, calculate, write output
     from parser import AnnualParser
@@ -74,13 +82,17 @@ def get_args():
 
     group1 = parser.add_argument_group('File I/O')
     group1.add_argument('-d', '--inpath', '--data', 
-                        dest='data_dir', metavar='InDataDir',
+                        dest='data_dir', metavar='InDir',
                         default=cf.data_dir,
                         help='Path to data (default: \'%(default)s\'.')
     group1.add_argument('-o', '--outpath',
-                        dest='out_dir', metavar='OutDataDir',
+                        dest='out_dir', metavar='OutDir',
                         default=cf.out_dir,
                         help='Path to save output (default: \'%(default)s\').')
+    group1.add_argument('-c', '--outpath_child',
+                        dest='out_dir_child', metavar='OutChild',
+                        default=cf.out_dir_child,
+                        help='Path to save output iteration (default: \'%(default)s\').')
     group1.add_argument('-L', '--logpath',
                         dest='log_dir', metavar='LogDir',
                         default=cf.log_dir,

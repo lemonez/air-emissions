@@ -7,18 +7,19 @@ print(time.strftime("%H:%M:%S")+'\tmodule \''+__name__+'\' reloaded.')
 ##BEGIN USER EDITS##
 ####################
 
-#### testing/dev/qa iterations
-outpath_prefix = 'dev_'
-
 #### configure data/calculations ####
 data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
 data_dir      = './data/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
+out_dir_child = 'dev'
 
-first_month_to_calculate = 1
-last_month_to_calculate  = 8
+first_month_to_calculate = 4
+last_month_to_calculate  = 4
+
+# just to be explicit: this is the offset for accessing tstamp intervals
+month_offset = first_month_to_calculate
 
 equips_to_calculate = ['coker_e', 'coker_w']
 we_are_calculating_toxics = False

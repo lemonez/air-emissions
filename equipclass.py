@@ -56,7 +56,7 @@ class Equipment(object):
         self.month          = month
         
         # instance attributes calculated at instance level
-        self.ts_interval    = self.ts_intervals[self.month-1]
+        self.ts_interval    = self.ts_intervals[self.month - cf.month_offset]
         
         # gas-sample lab results (DataFrames)
         self.RFG_monthly    = ff.get_monthly_lab_results(self.RFG_annual,
@@ -79,8 +79,8 @@ class Equipment(object):
         if self.unit_key == 'coker_w':
             co2 = self.w_co2
         
-        return co2.loc[self.ts_intervals[self.month-1][0]:
-                       self.ts_intervals[self.month-1][1]]
+        return co2.loc[self.ts_intervals[self.month - cf.month_offset][0]:
+                       self.ts_intervals[self.month - cf.month_offset][1]]
 
     def calc_monthly_equip_emissions(self, hourly_df):
         """return series with monthly emissions"""
