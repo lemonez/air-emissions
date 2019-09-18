@@ -33,13 +33,17 @@ class Equipment(object):
     
     # files
     fname_FG_chem  = 'chemicals_FG.csv'               # FG static chemical data
+    fname_NG_chem  = 'chemicals_NG.csv'               # NG static chemical data    
     fname_RFG      = str(year)+'_analyses_RFG.xlsx'   # RFG-sample lab-test data
+    fname_NG       = str(year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
     fname_cokerFG  = str(year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
     fname_ewcoker  = '2019_data_EWcoker.xlsx'         # coker cems, fuel, flow data
     
     # paths
     fpath_FG_chem  = static_prefix+fname_FG_chem
+    fpath_NG_chem  = static_prefix+fname_NG_chem
     fpath_RFG      = annual_prefix+fname_RFG
+    fpath_NG       = annual_prefix+fname_NG
     fpath_cokerFG  = annual_prefix+fname_cokerFG
     fpath_ewcoker  = annual_prefix+fname_ewcoker
     
@@ -50,6 +54,10 @@ class Equipment(object):
     unitkey_name   = {'coker_e':'East Coker', 'coker_w':'West Coker'} # replace w/ dynamic
     RFG_annual     = ff.parse_annual_FG_lab_results(fpath_RFG)
                     # df: annual RFG lab-test results
+    NG_annual      = ff.parse_annual_NG_lab_results(fpath_NG)
+                    # df: annual NG lab-test results
+    cokerFG_annual   = ff.parse_annual_FG_lab_results(fpath_cokerFG)
+                    # df: annual coker-gas lab-test results                    
     col_name_order = ['equipment', 'month', 'rfg_mscfh', 'co2'] # replace 'rfg_mscfh' with 'fuel_rfg' once units are figured out
 
     def __init__(self, unit_key, month):
@@ -62,12 +70,19 @@ class Equipment(object):
         
         # gas-sample lab results (DataFrames)
         self.RFG_monthly    = ff.get_monthly_lab_results(self.RFG_annual,
-                                                         self.ts_interval)                    
+                                                         self.ts_interval)
+        
         # fuel higher heating values (floats)
-        self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)    
-
+        self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
+        self.HHV_NG         = ff.calculate_monthly_HHV(self.NG_monthly)
+        self.HHV_cokerFG      = ff.calculate_monthly_HHV(self.coker_monthly)
+        
         # fuel f-factors (floats) calculated using static chem data
         self.f_factor_RFG   = ff.calculate_monthly_f_factor(self.RFG_monthly,
+                                        self.fpath_FG_chem, self.ts_interval)
+        self.f_factor_NG    = ff.calculate_monthly_f_factor(self.NG_monthly,
+                                        self.fpath_NG_chem, self.ts_interval)
+        self.f_factor_cokerFG = ff.calculate_monthly_f_factor(self.cokerFG_monthly,
                                         self.fpath_FG_chem, self.ts_interval)
                                         
         # annual CO2 emissions
