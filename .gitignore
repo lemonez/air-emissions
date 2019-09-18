@@ -11,3 +11,6 @@ junk.py
 *.csv
 *.xls*
 *notes.txt
+*pycache*
+*.csh
+deepreloader.py
