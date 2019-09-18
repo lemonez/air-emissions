@@ -33,12 +33,14 @@ class Equipment(object):
     
     # files
     fname_FG_chem  = 'chemicals_FG.csv'               # FG static chemical data
-    fname_RFG      = str(year)+'_analyses_RFG_DUMMY.xlsx'   # RFG-sample lab-test data
-    fname_ewcoker  = '2019_data_EWcoker.xlsx' # coker cems, fuel, flow data
+    fname_RFG      = str(year)+'_analyses_RFG.xlsx'   # RFG-sample lab-test data
+    fname_cokerFG  = str(year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
+    fname_ewcoker  = '2019_data_EWcoker.xlsx'         # coker cems, fuel, flow data
     
     # paths
     fpath_FG_chem  = static_prefix+fname_FG_chem
     fpath_RFG      = annual_prefix+fname_RFG
+    fpath_cokerFG  = annual_prefix+fname_cokerFG
     fpath_ewcoker  = annual_prefix+fname_ewcoker
     
     # consts, dicts, dfs (indented descriptions follow variable assignments)

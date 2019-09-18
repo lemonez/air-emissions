@@ -1,8 +1,7 @@
-# global import external libraries
 import pandas as pd
-import time
 
 # print timestamp for checking import timing
+import time
 print(time.strftime("%H:%M:%S")+'\tmodule \''+__name__+'\' reloaded.')
 
 """ 40 CFR Appendix A-7 to Part 60 - Test Method 19 -
@@ -65,6 +64,26 @@ FG_compounds = {
         'c-2-Pentene- mol%'       : 'c-2-Pentene'       ,
         'Hexanes Plus- mol%'      : 'Hexanes Plus'
         }
+
+NG_compounds = {
+        'Carbon dioxide- mol%'   : 'Carbon dioxide'   ,
+        'Nitrogen- mol%'         : 'Nitrogen'         ,
+        'Methane- mol%'          : 'Methane'          ,
+        'Ethane- mol%'           : 'Ethane'           ,
+        'Propane- mol%'          : 'Propane'          ,
+        'Isobutane- mol%'        : 'Isobutane'        ,
+        'n-Butane- mol%'         : 'n-Butane'         ,
+        'Isopentane- mol%'       : 'Isopentane'       ,
+        'n-Pentane- mol%'        : 'n-Pentane'        ,
+        'C6 -  mol%'             : 'C6'               ,
+        'C7- mol%'               : 'C7'               ,
+        'C8- mol%'               : 'C8'               ,
+        'C9- mol%'               : 'C9'               ,
+        'C10- mol%'              : 'C10'              ,
+        'C10+ - mol%'            : 'C10+'             ,
+        'Hydrogen sulfide- mol%' : 'Hydrogen sulfide' ,
+        'H2O lb'                 : 'H2O'               # remember this is in lbs
+        }
         
 def read_chem_constants(path):
     """Read chemistry constants/parameters into DataFrame."""
@@ -79,6 +98,9 @@ def parse_annual_FG_lab_results(path):
 	of chemical data by date."""
     
     data = pd.read_excel(path, skiprows=3, header=[0,1], index_col=0)
+    
+    # replace missing symbols with NaN
+    data.replace(['****', '--'], pd.np.nan, inplace=True)
     
     # combine data and time MultiIndex rows to create one DatetimeIndex
             # data.columns = data.columns.droplevel(1) # if we wanted to ignore the time
