@@ -43,7 +43,7 @@ def main():
     print('\n'+start_time+'\tmodule \''+__name__+'\' began running.')
     
     # parse input, calculate, write output
-    from parser import AnnualParser
+    from parserClass import AnnualParser
     ap = AnnualParser()
     ap.read_and_write_all()
     

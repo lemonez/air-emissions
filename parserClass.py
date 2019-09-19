@@ -1,7 +1,7 @@
 import pandas as pd
 
 import config as cf
-from equipclass import Equipment
+import equipclass
 
 # print timestamp for checking import timing
 import time
@@ -35,8 +35,6 @@ class AnnualParser(object):
     def aggregate_all_to_annual(self, equip_list, months_to_parse, toxics=is_toxics):
         """Generate annual emissions DataFrame from list of equipment keys."""
         
-        from equipclass import Equipment
-
         ordered_equips_to_calculate = self.equips_to_calc
         
         # calculate emissions for every month x equipment combo specified
@@ -54,7 +52,7 @@ class AnnualParser(object):
                 if cf.verbose_calc_status:
                     print('\tCalculating month {:2d}{}emissions for {}...'
                                 .format(month, toxics_text, equip))
-                inst = Equipment(equip, month) # instantiate indiv equip
+                inst = equipclass.Equipment(equip, month) # instantiate indiv equip
                 
                 if not toxics:
                     p = inst.get_monthly_co2_emissions()
