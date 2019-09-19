@@ -35,7 +35,7 @@ class Equipment(object):
     fname_FG_chem  = 'chemicals_FG.csv'               # FG static chemical data
     fname_NG_chem  = 'chemicals_NG.csv'               # NG static chemical data    
     fname_RFG      = str(year)+'_analyses_RFG.xlsx'   # RFG-sample lab-test data
-    fname_NG       = str(year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
+    fname_NG       = str(year)+'_analyses_NG_DUMMY.xlsx'    # NG-sample lab-test data
     fname_cokerFG  = str(year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
     fname_ewcoker  = '2019_data_EWcoker.xlsx'         # coker cems, fuel, flow data
     
@@ -70,6 +70,10 @@ class Equipment(object):
         
         # gas-sample lab results (DataFrames)
         self.RFG_monthly    = ff.get_monthly_lab_results(self.RFG_annual,
+                                                         self.ts_interval)
+        self.NG_monthly     = ff.get_monthly_lab_results(self.NG_annual,
+                                                         self.ts_interval)
+        self.cokerFG_monthly  = ff.get_monthly_lab_results(self.cokerFG_annual,
                                                          self.ts_interval)
         
         # fuel higher heating values (floats)
