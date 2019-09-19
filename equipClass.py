@@ -1,3 +1,9 @@
+start_time_seconds = time.time()
+start_time = time.strftime("%H:%M:%S")
+print(start_time+'\tmodule \''+__name__+'\' began reloading.')
+
+##============================================================================##
+
 # global import external libraries
 import pandas as pd
 import time
@@ -5,11 +11,6 @@ import time
 # module-level imports
 import config as cf
 import ffactor as ff
-import emismap as em
-
-start_time_seconds = time.time()
-start_time = time.strftime("%H:%M:%S")
-print(start_time+'\tmodule \''+__name__+'\' began reloading.')
 
 class AnnualEquipment(object):
     """Class containing information for parsing monthly emissions
