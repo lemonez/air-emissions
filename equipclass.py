@@ -79,7 +79,7 @@ class Equipment(object):
         # fuel higher heating values (floats)
         self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
         self.HHV_NG         = ff.calculate_monthly_HHV(self.NG_monthly)
-        self.HHV_cokerFG      = ff.calculate_monthly_HHV(self.coker_monthly)
+        self.HHV_cokerFG      = ff.calculate_monthly_HHV(self.cokerFG_monthly)
         
         # fuel f-factors (floats) calculated using static chem data
         self.f_factor_RFG   = ff.calculate_monthly_f_factor(self.RFG_monthly,
