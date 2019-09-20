@@ -42,10 +42,9 @@ def main():
     start_time = time.strftime("%H:%M:%S")
     print('\n'+start_time+'\tmodule \''+__name__+'\' began running.')
     
-    # parse input, calculate, write output
+    # parse input, calculate emissions, write output
     from parserClass import AnnualParser
-    ap = AnnualParser()
-    ap.read_and_write_all()
+    AnnualParser().read_and_write_all()
     
     # print total time for script runtime
     end_time_seconds = time.time()

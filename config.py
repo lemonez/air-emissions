@@ -16,7 +16,7 @@ log_suffix    = ''
 out_dir_child = 'dev'
 
 first_month_to_calculate = 1
-last_month_to_calculate  = 7
+last_month_to_calculate  = 10
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
@@ -29,7 +29,7 @@ calciner_toxics = False
 # select month format for output; defaults to name abbreviations
 #   integers     (1, 2, ... 12)
 #   name abbrevs ('Jan', 'Feb', ..., 'Dec')
-month_names = True
+write_month_names = True # write month names (abbrevs) in output
 
 # select verbosity of calculation status logging to console
 verbose_calc_status = True
@@ -44,38 +44,38 @@ verbose_calc_status = True
 months_to_calculate = range(first_month_to_calculate,
                             last_month_to_calculate + 1)
 
-# helper function for debugging
 def ends(df, n=2):
-    """view first and last rows of df"""
+    """Return first and last rows of pd.DataFrame"""
     return pd.concat([df.head(n), df.tail(n)])
 
 def generate_ts_interval_list():
-    """Generate (start, end) tuple for each month. Handles leap
-    years, differing month lengths, DST offsets, etc."""
-
+    """Generate datetime-aware tuple (start, end) for each month."""
     intervals = []
     for mo in months_to_calculate:
-        ts_start = pd.to_datetime(str(data_year)+'-'+str(mo)+'-01', format='%Y-%m-%d')
-                # Timestamp('2018-01-01 00:00:00')
-        ts_end   = ts_start + pd.DateOffset(months=1) - pd.DateOffset(hours=1)
-                # Timestamp('2018-01-31 23:00:00')
-
-        interval = (ts_start, ts_end)
-        # interval = pd.date_range(start=ts_start, end=ts_end, freq='H')
-
+        ts_start = pd.to_datetime(str(data_year)+'-'+str(mo)+'-01', format='%Y-%m-%d') # Timestamp('2018-01-01 00:00:00')
+        ts_end   = ts_start + pd.DateOffset(months=1) - pd.DateOffset(hours=1) # Timestamp('2018-01-31 23:00:00')
+        interval = (ts_start, ts_end) # interval = pd.date_range(start=ts_start, end=ts_end, freq='H')
         intervals.append(interval)
-            # [(Timestamp('2018-01-01 00:00:00'), Timestamp('2018-01-31 23:00:00')),
-            #  (Timestamp('2018-02-01 00:00:00'), Timestamp('2018-02-28 23:00:00')),
     return intervals
 
 def generate_date_range():
-    """generate date_range to fill missing timestamps;
-    based on year/months in config.py"""
-
+    """Generate pd.date_range from config.py for missing timestamps."""
     tsi = generate_ts_interval_list()
-    
     s_tstamp = tsi[0][0]
     e_tstamp = tsi[len(tsi) - 1][1]
-    
     dr = pd.date_range(start=s_tstamp, end=e_tstamp, freq='H')
     return dr
+
+def generate_month_map():
+    """Generate dict to map month numbers to names for output."""
+    months_int  = list(range(1,13))  # [1, 2, 3... 12]
+    months_str  = [str(i) for i in months_int]
+    months_abrv = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    month_map = {}
+    for i, a in zip(months_str, months_abrv):
+        month_map[i] = a
+    return month_map
+
+if write_month_names:
+    month_map = generate_month_map()
