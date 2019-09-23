@@ -36,31 +36,33 @@ class AnnualEquipment(object):
     static_prefix  = data_prefix+'static/'     # static data
     
     # files
+    fname_eqmap    = 'equipmap.csv'                   # all equipment names / IDs    
     fname_FG_chem  = 'chemicals_FG.csv'               # FG static chemical data
     fname_NG_chem  = 'chemicals_NG.csv'               # NG static chemical data    
-    fname_RFG      = str(year)+'_analyses_RFG.xlsx'   # RFG-sample lab-test data
     fname_NG       = str(year)+'_analyses_NG_DUMMY.xlsx'    # NG-sample lab-test data
     fname_cokerFG  = str(year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
     fname_ewcoker  = '2019_data_EWcoker.xlsx'         # coker cems, fuel, flow data
     
     # paths
+    fpath_eqmap    = static_prefix+fname_eqmap
     fpath_FG_chem  = static_prefix+fname_FG_chem
     fpath_NG_chem  = static_prefix+fname_NG_chem
-    fpath_RFG      = annual_prefix+fname_RFG
     fpath_NG       = annual_prefix+fname_NG
     fpath_cokerFG  = annual_prefix+fname_cokerFG
     fpath_ewcoker  = annual_prefix+fname_ewcoker
     
     # consts, dicts, dfs (indented descriptions follow variable assignments)
     ts_intervals   = cf.generate_ts_interval_list()
-# replace w/ dynamic
-    unitID_equip   = {'XX ecoker': 'coker_e',
-                      'YY wcoker': 'coker_w'}
-# replace w/ dynamic
-    unitkey_name   = {'coker_e':'East Coker Heater',
-                      'coker_w':'West Coker Heater'}
-    RFG_annual     = ff.parse_annual_FG_lab_results(fpath_RFG)
-                    # df: annual RFG lab-test results
+    equip          = cf.parse_equip_map(fpath_eqmap)
+                    # df: all equipment/PItag data
+    unitID_equip   = cf.generate_unitID_unitkey_dict(equip)
+                    # dict: unit IDs (WED Pts) and their Python GUIDs    
+                    # unitID_equip   = {'XX ecoker': 'coker_e',
+                                      # 'YY wcoker': 'coker_w'}
+    unitkey_name   = cf.generate_unitkey_unitname_dict(equip)
+                    # dict: Python GUIDs and their unit names for output 
+                    # unitkey_name   = {'coker_e':'East Coker Heater',
+                                      # 'coker_w':'West Coker Heater'}
     NG_annual      = ff.parse_annual_NG_lab_results(fpath_NG)
                     # df: annual NG lab-test results
     cokerFG_annual = ff.parse_annual_FG_lab_results(fpath_cokerFG)
@@ -68,8 +70,9 @@ class AnnualEquipment(object):
 
     def __init__(self):
         """Contstructor for parsing annual emission-unit data."""
-        print('DEBUG')
-        print(repr(self.__class__)+' init\'ed')
+        # print(repr(self.__class__)+' init\'ed (**DEBUG**)')
+        print('AnnualEquipment() init\'ed')        
+        
 
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data."""
@@ -77,7 +80,7 @@ class AnnualCoker(AnnualEquipment):
     def __init__(self):
         """Constructor for parsing annual coker data."""
         super().__init__()
-        print(repr(self.__class__)+' init\'ed')
+        print('AnnualCoker() init\'ed')
     
     def unmerge_annual_ewcoker(self):
         """Unmerge E/W coker data."""
@@ -105,9 +108,9 @@ class AnnualCoker(AnnualEquipment):
         df = self.merge_annual_ewcoker()
         
         # DUMMY DATA
-        df['pilot_mscfh'] = 2
-        df.loc['2019-04-29 22:00:00':'2019-04-29 23:00:00', 'rfg_mscfh_e'] = pd.np.nan
-        df.loc['2019-04-30 00:00:00':'2019-04-30 00:00:00', ['rfg_mscfh_e', 'rfg_mscfh_w']] = [pd.np.nan, 110]
+        df['pilot_mscfh'] = 0.2
+        # df.loc['2019-04-29 22:00:00':'2019-04-29 23:00:00', 'rfg_mscfh_e'] = pd.np.nan
+        # df.loc['2019-04-30 00:00:00':'2019-04-30 00:00:00', ['rfg_mscfh_e', 'rfg_mscfh_w']] = [pd.np.nan, 110]
 
         df['pilot_mscfh_e'] = pd.np.nan
         df['pilot_mscfh_w'] = pd.np.nan
@@ -166,26 +169,23 @@ class MonthlyCoker(AnnualCoker):
         self.ts_interval    = self.ts_intervals[self.month - cf.month_offset]
         
         # gas-sample lab results (DataFrames)
-        self.RFG_monthly    = ff.get_monthly_lab_results(self.RFG_annual,
-                                                         self.ts_interval)
         self.NG_monthly     = ff.get_monthly_lab_results(self.NG_annual,
                                                          self.ts_interval)
         self.cokerFG_monthly  = ff.get_monthly_lab_results(self.cokerFG_annual,
                                                          self.ts_interval)
         
         # fuel higher heating values (floats)
-        self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
         self.HHV_NG         = ff.calculate_monthly_HHV(self.NG_monthly)
         self.HHV_cokerFG      = ff.calculate_monthly_HHV(self.cokerFG_monthly)
         
         # fuel f-factors (floats) calculated using static chem data
-        self.f_factor_RFG   = ff.calculate_monthly_f_factor(self.RFG_monthly,
-                                        self.fpath_FG_chem, self.ts_interval)
         self.f_factor_NG    = ff.calculate_monthly_f_factor(self.NG_monthly,
                                         self.fpath_NG_chem, self.ts_interval)
         self.f_factor_cokerFG = ff.calculate_monthly_f_factor(self.cokerFG_monthly,
                                         self.fpath_FG_chem, self.ts_interval)
-
+        
+        print('MonthlyCoker() init\'ed')
+    
     def calculate_monthly_equip_emissions(self):
         """Return monthly emissions as pd.Series."""
         

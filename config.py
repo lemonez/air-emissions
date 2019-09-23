@@ -1,5 +1,6 @@
 import time, os
 import pandas as pd
+from collections import OrderedDict
 
 print(time.strftime("%H:%M:%S")+'\tmodule \''+__name__+'\' reloaded.')
 
@@ -16,7 +17,7 @@ log_suffix    = ''
 out_dir_child = 'dev'
 
 first_month_to_calculate = 1
-last_month_to_calculate  = 10
+last_month_to_calculate  = 9
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
@@ -65,6 +66,42 @@ def generate_date_range():
     e_tstamp = tsi[len(tsi) - 1][1]
     dr = pd.date_range(start=s_tstamp, end=e_tstamp, freq='H')
     return dr
+
+def parse_equip_map(path):
+    """Read CSV with equipment information and return pd.DataFrame."""
+    col_map = {
+        'PI Tag'     : 'ptag',
+        'Python GUID': 'unit_key',
+        'WED Pt'     : 'unit_id', 
+        'Unit Name'  : 'unit_name',
+        'CEMS'       : 'param',
+        'Units'      : 'units'
+        }
+    
+    equip_info = (pd.read_csv(path)).rename(columns=col_map)
+    equip_info['param'] = equip_info['param'].str.strip().str.lower()
+    equip_info['units'] = equip_info['units'].str.strip().str.lower()
+    equip_info.replace({'dry o2': 'o2'}, inplace=True)
+            # equip_info.loc[equip_info['ptag'] == '46AI601.PV', 'param'] = 'o2' # change 'dry o2' to 'o2' for H2 Plant
+    equip_info['param_units'] = equip_info['param']+'_'+equip_info['units']
+            # .set_index(['unit_key', 'ptag'])
+            # .set_index('PI Tag')
+            # .rename_axis('ptag', axis=0))
+    return equip_info
+
+def generate_unitID_unitkey_dict(equip_df):
+    """Return OrderedDict of equipment ({unit_id: unit_key})"""
+    unitID_unitkey_dict = (equip_df.set_index('unit_id')['unit_key']
+                                   .to_dict(into=OrderedDict))
+    return unitID_unitkey_dict    
+
+def generate_unitkey_unitname_dict(equip_df):
+    """Return dict of equipment to remap output names ({unit_key: unit_name})"""
+    unitkey_unitname_dict = (equip_df
+                             .drop_duplicates(subset='unit_key')
+                             .set_index('unit_key')['unit_name']
+                             .to_dict())
+    return unitkey_unitname_dict
 
 def generate_month_map():
     """Generate dict to map month numbers to names for output."""

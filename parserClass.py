@@ -137,7 +137,7 @@ class AnnualParser(object):
         
         # create MultiIndex for renaming columns
         if not self.is_toxics:
-            arr_col = [['Refinery Fuel Gas','CO'],
+            arr_col = [['Refinery Fuel Gas','CO2'],
                        (['mscf'] * 1) + (['tons'] * 1)]
         else:
             if not self.is_calciner_toxics:
