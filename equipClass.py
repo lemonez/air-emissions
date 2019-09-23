@@ -39,7 +39,7 @@ class AnnualEquipment(object):
     fname_eqmap    = 'equipmap.csv'                   # all equipment names / IDs    
     fname_FG_chem  = 'chemicals_FG.csv'               # FG static chemical data
     fname_NG_chem  = 'chemicals_NG.csv'               # NG static chemical data    
-    fname_NG       = str(year)+'_analyses_NG_DUMMY.xlsx'    # NG-sample lab-test data
+    fname_NG       = str(year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
     fname_cokerFG  = str(year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
     fname_ewcoker  = '2019_data_EWcoker.xlsx'         # coker cems, fuel, flow data
     
