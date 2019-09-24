@@ -93,10 +93,11 @@ def read_chem_constants(path):
     return data
 
 def parse_annual_FG_lab_results(path):
-    """Read fuel-gas lab-test results (from RFG or H2 flare)
-	from tests completed several times monthly. Return DataFrame
-	of chemical data by date."""
-    
+    """Read fuel-gas lab-test results and return pd.DataFrame."""
+    """
+    Fuel analysis tests completed several times monthly for RFG,
+    cokerFG, CVTG, and H2 flare. Data is averaged on a monthly basis.
+	"""
     data = pd.read_excel(path, skiprows=3, header=[0,1], index_col=0)
     
     # replace missing symbols with NaN
@@ -125,13 +126,14 @@ def parse_annual_FG_lab_results(path):
     data.rename(index=FG_compounds, inplace=True)
         # could also use: data.index = data.index.map(FG_compounds)
 #    data.loc['Oxygen', :] = 0
-    
     return data
 
 def parse_annual_NG_lab_results(path):
-    """Read natural-gas lab-test results from tests completed monthly.
-    Return DataFrame of chemical data by date."""
-    
+    """Read natural-gas lab-test results and return pd.DataFrame."""
+    """
+    Fuel analysis tests completed several times monthly. Data is
+    averaged on a monthly basis.
+	"""
     data = pd.read_excel(path, skiprows=8)[:12]
     data['Sample Date'] = pd.to_datetime(data['Sample Date'])
     
@@ -140,42 +142,35 @@ def parse_annual_NG_lab_results(path):
     data.columns.name = 'test_date'
     data.index.name   = 'compound'
     
-    # order like RFG dataframe
+    # order like fuel gas dataframe
     data = (data.reindex(index=list(data.index[2:])
            + [data.index[1], data.index[0]]))
-    
     return data
 
 def get_monthly_lab_results(annual_gas_test_df, ts_interval):
-    """Return Dataframe with gas lab-test results for month of interest."""
-    
-    # define tstamps for interval start and end
+    """Return pd.DataFrame with gas lab-test results for month."""
     start = ts_interval[0]
     end   = ts_interval[1]
-    
     cols = annual_gas_test_df.columns
     
     # subset dataframe for samples taken within time interval of interest
     sub = annual_gas_test_df.loc[:, cols[(cols >= start) & (cols <= end)]]
-    
     return sub
 
 def calculate_monthly_HHV(monthly_gas_test_results_df):
-    """Calculate average higher heating value (HHV, gbtu/cf)
-    from gas lab-test results for given month."""
-    
+    """Calculate average higher heating value (HHV, gbtu/cf) for month."""
     HHV = monthly_gas_test_results_df.loc['GBTU/CF'].mean()
-    
     return HHV
     
 def calculate_monthly_f_factor(gas_test_results_df, gas_chem_path,
                                 ts_interval, ff_terms=ff_constants):
-    """Calculate refinery fuel gas f-factor using chemistry constants
-    and gas lab-test results, adhering to EPA Test Method 19 -
-    40 CFR Appendix A-7 to Part 60 - Determination of sulfur dioxide
-    removal efficiency and particulate, sulfur dioxide and nitrogen
-    oxides emission rates."""
-    
+    """Calculate refinery fuel gas Fd-factor."""
+    """
+    Uses chemistry constants and gas lab-analysis data, adhering to:
+    "EPA Test Method 19 - 40 CFR Appendix A-7 to Part 60 -
+    Determination of sulfur dioxide removal efficiency and
+    particulate, sulfur dioxide and nitrogen oxides emission rates."
+    """
     chem   = read_chem_constants(gas_chem_path)
     ftable = (pd.merge(gas_test_results_df, chem, how='left',
                        left_on='compound', right_on='compound')
@@ -241,5 +236,4 @@ def calculate_monthly_f_factor(gas_test_results_df, gas_chem_path,
                                  )
                                / ff_terms['GCV']
                )
-    
     return f_factor

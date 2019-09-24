@@ -13,12 +13,9 @@ def main():
     
     #if args_dict['log_suffix'] != '':
     #    args_dict['log_suffix'] = '_' + args_dict['log_suffix']
-    if not args_dict['out_dir'].endswith('/'):
-        args_dict['out_dir'] += '/'
-    if not args_dict['out_dir_child'].endswith('/'):
-        args_dict['out_dir_child'] += '/'
+    append_slash_to_dir(args_dict, ['out_dir', 'out_dir_child'])
     args_dict['out_dir_child'] = args_dict['out_dir'] + args_dict['out_dir_child']
-
+    
     update_config(cf, args_dict)
 
     if not cf.quiet:
@@ -44,7 +41,9 @@ def main():
     
     # parse input, calculate emissions, write output
     from parserClass import AnnualParser
-    AnnualParser().read_and_write_all()
+    from equipClass import AnnualEquipment
+    
+    AnnualParser(AnnualEquipment()).read_and_write_all()
     
     # print total time for script runtime
     end_time_seconds = time.time()
@@ -134,6 +133,12 @@ def update_config(dst, src):
     """generic function to update attributes in module"""
     for key, val in src.items():
         setattr(dst, key, val)
+
+def append_slash_to_dir(di, kys):
+    """Append forward slash to dict value (if necessary) to create directory."""
+    for ky in kys:
+        if not di[ky].endswith('/'):
+            di[ky] += '/'
 
 if __name__ == '__main__':
     main()

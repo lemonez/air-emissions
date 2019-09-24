@@ -1,5 +1,6 @@
 # global import external libraries
 import pandas as pd
+from collections import OrderedDict
 import time
 
 start_time_seconds = time.time()
@@ -27,65 +28,123 @@ class AnnualEquipment(object):
         NG   = natural gas
     """
     
-    # variables shared by all instances
-    year = cf.data_year
-    
-    # directories
-    data_prefix    = cf.data_dir               # all input data files
-    annual_prefix  = data_prefix+'annual/'     # data that changes monthly/annually
-    static_prefix  = data_prefix+'static/'     # static data
-    
-    # files
-    fname_eqmap    = 'equipmap.csv'                   # all equipment names / IDs    
-    fname_FG_chem  = 'chemicals_FG.csv'               # FG static chemical data
-    fname_NG_chem  = 'chemicals_NG.csv'               # NG static chemical data    
-    fname_NG       = str(year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
-    fname_cokerFG  = str(year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
-    fname_ewcoker  = '2019_data_EWcoker.xlsx'         # coker cems, fuel, flow data
-    
-    # paths
-    fpath_eqmap    = static_prefix+fname_eqmap
-    fpath_FG_chem  = static_prefix+fname_FG_chem
-    fpath_NG_chem  = static_prefix+fname_NG_chem
-    fpath_NG       = annual_prefix+fname_NG
-    fpath_cokerFG  = annual_prefix+fname_cokerFG
-    fpath_ewcoker  = annual_prefix+fname_ewcoker
-    
-    # consts, dicts, dfs (indented descriptions follow variable assignments)
-    ts_intervals   = cf.generate_ts_interval_list()
-    equip          = cf.parse_equip_map(fpath_eqmap)
-                    # df: all equipment/PItag data
-    unitID_equip   = cf.generate_unitID_unitkey_dict(equip)
-                    # dict: unit IDs (WED Pts) and their Python GUIDs    
-                    # unitID_equip   = {'XX ecoker': 'coker_e',
-                                      # 'YY wcoker': 'coker_w'}
-    unitkey_name   = cf.generate_unitkey_unitname_dict(equip)
-                    # dict: Python GUIDs and their unit names for output 
-                    # unitkey_name   = {'coker_e':'East Coker Heater',
-                                      # 'coker_w':'West Coker Heater'}
-    NG_annual      = ff.parse_annual_NG_lab_results(fpath_NG)
-                    # df: annual NG lab-test results
-    cokerFG_annual = ff.parse_annual_FG_lab_results(fpath_cokerFG)
-                    # df: annual cokerFG lab-test results
-
     def __init__(self):
-        """Contstructor for parsing annual emission-unit data."""
+        """Constructor for parsing annual emission-unit data."""
         # print(repr(self.__class__)+' init\'ed (**DEBUG**)')
-        print('AnnualEquipment() init\'ed')        
+        print('AnnualEquipment() init\'ed')
         
+        self.year           = cf.data_year
+        self.months_to_calc = cf.months_to_calculate
+        self.month_offset   = cf.month_offset
+        
+        # directories
+        self.data_prefix    = cf.data_dir                           # all input data files
+        self.annual_prefix  = self.data_prefix+'annual/'            # data that changes monthly/annually
+        self.static_prefix  = self.data_prefix+'static/'            # static data
+        
+        # files
+        self.fname_eqmap    = 'equipmap.csv'                        # all equipment names / IDs    
+        self.fname_FG_chem  = 'chemicals_FG.csv'                    # FG static chemical data
+        self.fname_NG_chem  = 'chemicals_NG.csv'                    # NG static chemical data    
+        self.fname_NG       = str(self.year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
+        self.fname_cokerFG  = str(self.year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
+        self.fname_ewcoker  = '2019_data_EWcoker.xlsx'              # coker cems, fuel, flow data
+        
+        # paths
+        self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
+        self.fpath_FG_chem  = self.static_prefix+self.fname_FG_chem
+        self.fpath_NG_chem  = self.static_prefix+self.fname_NG_chem
+        self.fpath_NG       = self.annual_prefix+self.fname_NG
+        self.fpath_cokerFG  = self.annual_prefix+self.fname_cokerFG
+        self.fpath_ewcoker  = self.annual_prefix+self.fname_ewcoker
+        
+        # consts, dicts, dfs (indented descriptions follow variable assignments)
+        self.ts_intervals   = self.generate_ts_interval_list()
+            
+        # equipment mapping
+        self.equip          = self.parse_equip_map()
+        self.unitID_equip   = self.generate_unitID_unitkey_dict()
+        self.unitkey_name   = self.generate_unitkey_unitname_dict()
+        
+        # fuel analysis data
+        self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_NG)
+        self.cokerFG_annual = ff.parse_annual_FG_lab_results(self.fpath_cokerFG)
+    
+    def generate_unitkey_unitname_dict(self):
+        """Return dict of equipment keys ({unit_key: unit_name})"""
+        """
+        ex: {'coker_e': 'Coker E Charge Heater',
+             'coker_w': 'Coker W Charge Heater'}
+        """
+        unitkey_unitname_dict = (self.equip
+                                 .drop_duplicates(subset='unit_key')
+                                 .set_index('unit_key')['unit_name']
+                                 .to_dict())
+        return unitkey_unitname_dict
+    
+    def generate_unitID_unitkey_dict(self):
+        """Return OrderedDict of equipment IDs ({unit_id: unit_key})"""
+        """
+        ex: OrderedDict([('40_E', 'coker_e'),
+                         ('41_W', 'coker_w')])
+        """
+        unitID_unitkey_dict = (self.equip.set_index('unit_id')['unit_key']
+                                            .to_dict(into=OrderedDict))
+        return unitID_unitkey_dict
+
+    def parse_equip_map(self):
+        """Read CSV of equipment information and return pd.DataFrame."""
+        col_map = {
+            'PI Tag'     : 'ptag',
+            'Python GUID': 'unit_key',
+            'WED Pt'     : 'unit_id', 
+            'Unit Name'  : 'unit_name',
+            'CEMS'       : 'param',
+            'Units'      : 'units'
+            }
+        
+        equip_info = (pd.read_csv(self.fpath_eqmap)).rename(columns=col_map)
+        equip_info['param'] = equip_info['param'].str.strip().str.lower()
+        equip_info['units'] = equip_info['units'].str.strip().str.lower()
+        equip_info.replace({'dry o2': 'o2'}, inplace=True)
+                # equip_info.loc[equip_info['ptag'] == '46AI601.PV', 'param'] = 'o2' # change 'dry o2' to 'o2' for H2 Plant
+        equip_info['param_units'] = equip_info['param']+'_'+equip_info['units']
+                # .set_index(['unit_key', 'ptag'])
+                # .set_index('PI Tag')
+                # .rename_axis('ptag', axis=0))
+        return equip_info
+
+    def generate_date_range(self):
+        """Generate pd.date_range to fill timestamps."""
+        tsi = self.generate_ts_interval_list()
+        s_tstamp = tsi[0][0]
+        e_tstamp = tsi[len(tsi) - 1][1]
+        dr = pd.date_range(start=s_tstamp, end=e_tstamp, freq='H')
+        return dr
+
+    def generate_ts_interval_list(self):
+        """Return list of monthly datetime tuples (start, end)."""
+        intervals = []
+        for mo in self.months_to_calc:
+            ts_start = pd.to_datetime(str(self.year)+'-'+str(mo)+'-01', format='%Y-%m-%d') # Timestamp('2018-01-01 00:00:00')
+            ts_end   = ts_start + pd.DateOffset(months=1) - pd.DateOffset(hours=1) # Timestamp('2018-01-31 23:00:00')
+            interval = (ts_start, ts_end) # interval = pd.date_range(start=ts_start, end=ts_end, freq='H')
+            intervals.append(interval)
+        return intervals
 
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data."""
     
-    def __init__(self):
+    def __init__(self, annual_equip):
         """Constructor for parsing annual coker data."""
-        super().__init__()
+#        super().__init__()
+        self.annual_equip = annual_equip
         print('AnnualCoker() init\'ed')
     
     def unmerge_annual_ewcoker(self):
         """Unmerge E/W coker data."""
         merged_df = self.implement_pilot_gas_logic()
-        merged_df = merged_df.reindex(cf.generate_date_range())
+        merged_df = merged_df.reindex(self.annual_equip.generate_date_range())
 
         e_cols = []
         w_cols = []
@@ -140,7 +199,8 @@ class AnnualCoker(AnnualEquipment):
     def parse_annual_ewcoker(self, cols):
         """Read in raw coker data."""
         sheet = 'East & West Coker Data'
-        dat = pd.read_excel(self.fpath_ewcoker, sheet_name=sheet, usecols=cols, header=3)
+        dat = pd.read_excel(self.annual_equip.fpath_ewcoker, sheet_name=sheet,
+                                                    usecols=cols, header=3)
 
         dat.replace('--', pd.np.nan, inplace=True)
         dat.columns = ['tstamp', 'o2_%', 'co2_%', 'rfg_mscfh']
@@ -159,31 +219,40 @@ class MonthlyCoker(AnnualCoker):
     
     def __init__(self,
                  unit_key,
-                 month):
+                 month,
+                 annual_coker):
         """Constructor for individual coker emission unit calculations."""
-        super().__init__()
-        self.month = month
-        self.unit_key = unit_key
+#        super().__init__()
+        self.month          = month
+        self.unit_key       = unit_key        
+        self.annual_coker   = annual_coker
+        self.annual_equip   = annual_coker.annual_equip
         
         # instance attributes calculated at month level
-        self.ts_interval    = self.ts_intervals[self.month - cf.month_offset]
+        self.ts_interval    = self.annual_equip.ts_intervals[self.month
+                                            - self.annual_equip.month_offset]
         
         # gas-sample lab results (DataFrames)
-        self.NG_monthly     = ff.get_monthly_lab_results(self.NG_annual,
-                                                         self.ts_interval)
-        self.cokerFG_monthly  = ff.get_monthly_lab_results(self.cokerFG_annual,
-                                                         self.ts_interval)
+        self.NG_monthly     = ff.get_monthly_lab_results(
+                                            self.annual_equip.NG_annual,
+                                            self.ts_interval)
+        self.cokerFG_monthly = ff.get_monthly_lab_results(
+                                            self.annual_equip.cokerFG_annual,
+                                            self.ts_interval)
         
         # fuel higher heating values (floats)
         self.HHV_NG         = ff.calculate_monthly_HHV(self.NG_monthly)
-        self.HHV_cokerFG      = ff.calculate_monthly_HHV(self.cokerFG_monthly)
+        self.HHV_cokerFG    = ff.calculate_monthly_HHV(self.cokerFG_monthly)
         
         # fuel f-factors (floats) calculated using static chem data
-        self.f_factor_NG    = ff.calculate_monthly_f_factor(self.NG_monthly,
-                                        self.fpath_NG_chem, self.ts_interval)
-        self.f_factor_cokerFG = ff.calculate_monthly_f_factor(self.cokerFG_monthly,
-                                        self.fpath_FG_chem, self.ts_interval)
-        
+        self.f_factor_NG    = ff.calculate_monthly_f_factor(
+                                            self.NG_monthly,
+                                            self.annual_equip.fpath_NG_chem,
+                                            self.ts_interval)
+        self.f_factor_cokerFG = ff.calculate_monthly_f_factor(
+                                            self.cokerFG_monthly,
+                                            self.annual_equip.fpath_FG_chem,
+                                            self.ts_interval)
         print('MonthlyCoker() init\'ed')
     
     def calculate_monthly_equip_emissions(self):
@@ -221,7 +290,6 @@ class MonthlyCoker(AnnualCoker):
             CO2       = hourly CO2 mass emission rate from Equation C-6, uncorrected (metric tons/hr)
             %H2O      = hourly moisture percentage in stack gas
         """
-        
         e_df, w_df = self.unmerge_annual_ewcoker()
         
         if self.unit_key == 'coker_e':
@@ -246,8 +314,7 @@ class MonthlyCoker(AnnualCoker):
         df['dscfh'] = df['rfg_scfh'] + df['pilot_scfh']
         df['co2']   = df['co2_%'] * df['dscfh'] * 5.18E-7
 
-        return df.loc[self.ts_intervals[self.month - cf.month_offset][0]:
-                       self.ts_intervals[self.month - cf.month_offset][1]]
+        return df.loc[self.ts_interval[0]:self.ts_interval[1]]
 
 ##============================================================================##
 

@@ -15,22 +15,37 @@ class AnnualParser(object):
     aggregating, slicing and dicing, formatting, and writing CSV output.
     """
     
-    # class variables from config file
-    year_to_calc       = cf.data_year
-    months_to_calc     = cf.months_to_calculate
-    equips_to_calc     = cf.equips_to_calculate
-#    h2s_equips_to_calc = cf.h2s_equips_to_calc
-#    EFs_to_check       = cf.EFs_to_check
-    is_toxics          = cf.we_are_calculating_toxics
-    is_calciner_toxics = cf.calciner_toxics
-    write_month_names  = cf.write_month_names
-    
     # output options
     write_csvs=True
     return_dfs=False
     
-    def __init__(self):
-        pass
+    def __init__(self, annual_equip):
+        """Constructor for handling inputs, calculations, and outputs."""
+        
+        self.annual_equip       = annual_equip
+        
+        # out-directory paths
+        self.out_dir_child      = cf.out_dir_child
+        
+        # parsed from config file
+        self.year_to_calc       = cf.data_year
+        self.months_to_calc     = cf.months_to_calculate
+        self.equips_to_calc     = cf.equips_to_calculate
+    #    h2s_equips_to_calc     = cf.h2s_equips_to_calc
+    #    EFs_to_check           = cf.EFs_to_check
+        self.is_toxics          = cf.we_are_calculating_toxics
+        self.is_calciner_toxics = cf.calciner_toxics
+        self.write_month_names  = cf.write_month_names
+        self.month_map          = cf.month_map
+        self.verbose_calc_status = cf.verbose_calc_status
+        
+        self.all_equip_dict     = {}
+
+        self.toxics_text = ' '
+        if self.is_toxics:
+            self.toxics_text = ' toxics '
+
+        self.ordered_equips_to_calculate = self.equips_to_calc
     
     def read_and_write_all(self):
         """Parse all data, calculate all emissions, write all CSVs."""
@@ -40,39 +55,32 @@ class AnnualParser(object):
         self.groupby_and_write_annual(f)
     
     def aggregate_all_to_annual(self):
-        """Generate annual emissions DataFrame from list of equipment keys."""
-        
-        ordered_equips_to_calculate = self.equips_to_calc
+        """Return pd.DataFrame of annual emissions from listed equipment."""
         
         # calculate emissions for every month x equipment combo specified
         print('Calculating emissions for equipment and months specified...')
-        
-        all_equip_dict = {}
-        
-        toxics_text = ' '
-        if self.is_toxics:
-            toxics_text = ' toxics '
             
-        for equip in ordered_equips_to_calculate:
+        for equip in self.ordered_equips_to_calculate:
             each_equip_ser = []
+            annual_coker = equipClass.AnnualCoker(self.annual_equip)
             for month in self.months_to_calc:
-                if cf.verbose_calc_status:
+                if self.verbose_calc_status:
                     print('\tCalculating month {:2d}{}emissions for {}...'
-                                .format(month, toxics_text, equip))
+                                .format(month, self.toxics_text, equip))
                 if not self.is_toxics:
                     if equip in ['coker_e', 'coker_w']:
                         emis = (equipClass
-                                .MonthlyCoker(equip, month)
+                                .MonthlyCoker(equip, month, annual_coker)
                                 .calculate_monthly_equip_emissions())
                 #else:
                     # see original equipclass.py script...
                 each_equip_ser.append(emis)
             all_months = pd.concat(each_equip_ser, axis=1)
-            all_equip_dict[equip] = all_months
+            self.all_equip_dict[equip] = all_months
         
         # transpose and concatenate DataFrames
         annual_dfs = []
-        for v in all_equip_dict.values():
+        for v in self.all_equip_dict.values():
             v.index.name = None
             annual_dfs.append(v.T)
         annual = pd.concat(annual_dfs)
@@ -90,14 +98,13 @@ class AnnualParser(object):
         # change month integers to abbreviated names if desired
         if self.write_month_names:
             annual_df['month'] = annual_df['month'].astype(str)
-            annual_df.replace({'month': cf.month_map}, inplace=True)
+            annual_df.replace({'month': self.month_map}, inplace=True)
         
         # pretty up the names of equipment and column headers for output
         annual_df['WED Pt'] = annual_df['equipment'].replace(
                                             dict((v,k)
                                             for k,v
-                                            in equipClass
-                                               .AnnualEquipment
+                                            in self.annual_equip
                                                .unitID_equip.items()))
 
         # column names to pretty up for final output
@@ -121,8 +128,7 @@ class AnnualParser(object):
 
         col_order = ['WED Pt', 'Equipment', 'Month', 'Refinery Fuel Gas', 'CO2']
                 
-        annual_df = (annual_df.replace({'equipment': equipClass
-                                                     .AnnualEquipment
+        annual_df = (annual_df.replace({'equipment': self.annual_equip
                                                      .unitkey_name})
                               .rename(columns=output_colnames))
         
@@ -224,7 +230,7 @@ class AnnualParser(object):
             print('Writing output to files.')
         
             for df in frames:        
-                outname = (cf.out_dir_child+str(self.year_to_calc)+'_'
+                outname = (self.out_dir_child+str(self.year_to_calc)+'_'
                            +df.name+'{}.csv')
                 if not self.is_toxics:
                     outname = outname.format('')
