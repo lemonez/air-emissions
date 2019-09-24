@@ -27,7 +27,6 @@ class AnnualEquipment(object):
         RFG  = refinery fuel gas
         NG   = natural gas
     """
-    
     def __init__(self):
         """Constructor for parsing annual emission-unit data."""
         self.year           = cf.data_year
@@ -301,21 +300,21 @@ class MonthlyCoker(AnnualCoker):
         if self.unit_key == 'coker_w':
             df = w_df
 
-        df['cokerfg_scfh'] = (df['cokerfg_mscfh']
+        df['cokerfg_dscfh'] = (df['cokerfg_mscfh']
                             * 1000 
                             * self.HHV_cokerFG
                             * 1/1000000
                             * self.f_factor_cokerFG
                             * 20.9 / (20.9 - df['o2_%']))
 
-        df['pilot_scfh'] = (df['pilot_mscfh']
+        df['pilot_dscfh'] = (df['pilot_mscfh']
                             * 1000 
                             * self.HHV_NG
                             * 1/1000000
                             * self.f_factor_NG
                             * 20.9 / (20.9 - df['o2_%']))
 
-        df['dscfh'] = df['cokerfg_scfh'] + df['pilot_scfh']
+        df['dscfh'] = df['cokerfg_dscfh'] + df['pilot_dscfh']
         df['co2']   = df['co2_%'] * df['dscfh'] * 5.18E-7
 
         return df.loc[self.ts_interval[0]:self.ts_interval[1]]

@@ -14,14 +14,12 @@ class AnnualParser(object):
     emissions calculations for all emissions units, and methods for
     aggregating, slicing and dicing, formatting, and writing CSV output.
     """
-    
     # output options
     write_csvs=True
     return_dfs=False
     
     def __init__(self, annual_equip):
         """Constructor for handling inputs, calculations, and outputs."""
-        
         self.annual_equip       = annual_equip
         
         # out-directory paths
@@ -49,17 +47,13 @@ class AnnualParser(object):
     
     def read_and_write_all(self):
         """Parse all data, calculate all emissions, write all CSVs."""
-        
         a = self.aggregate_all_to_annual()
-        f = self.format_annual(a)
+        f = self.format_annual_outnames(a)
         self.groupby_and_write_annual(f)
     
     def aggregate_all_to_annual(self):
         """Return pd.DataFrame of annual emissions from listed equipment."""
-        
-        # calculate emissions for every month x equipment combo specified
         print('Calculating emissions for equipment and months specified...')
-            
         for equip in self.ordered_equips_to_calculate:
             each_equip_ser = []
             annual_coker = equipClass.AnnualCoker(self.annual_equip)
@@ -88,55 +82,47 @@ class AnnualParser(object):
         
         # convert type "object" to type "float"
         annual[annual.columns[2:]] = annual[annual.columns[2:]].astype(float)
-        
         return annual
     
-    def format_annual(self, annual_df):
-        """Format data labels of annual emissions DataFrame
-        ([equipment, month] x pollutants) for CSV output."""
-        
+    def format_annual_outnames(self, annual_df):
+        """Format labels of annual emissions pd.DataFrame for CSV output."""
         print('Formatting emissions data.')
-        # change month integers to abbreviated names if desired
+        # change month integers to abbreviated names if specified
         if self.write_month_names:
             annual_df['month'] = annual_df['month'].astype(str)
             annual_df.replace({'month': self.month_map}, inplace=True)
         
-        # pretty up the names of equipment and column headers for output
+        # change equipment names and column headers to readable output names
         annual_df['WED Pt'] = annual_df['equipment'].replace(
                                             dict((v,k)
                                             for k,v
                                             in self.annual_equip
                                                .unitID_equip.items()))
-
-        # column names to pretty up for final output
+        # column names for final output
         output_colnames = {
-                'month'    : 'Month',
-                'equipment': 'Equipment',
+                'month'        : 'Month',
+                'equipment'    : 'Equipment',
                 'cokerfg_mscfh': 'Coker Fuel Gas',
-                'pilot_mscfh'  : 'Natural Gas (Pilot)',
-                'co2'      : 'CO2'
-                # 'fuel_rfg' : 'Refinery Fuel Gas',
-                # 'fuel_ng'  : 'Natural Gas',
-                # 'coke_tons': 'Calcined Coke',
-                # 'nox'      : 'NOx',
-                # 'co'       : 'CO',
-                # 'so2'      : 'SO2',
-                # 'voc'      : 'VOC', 
-                # 'pm'       : 'PM',
-                # 'pm25'     : 'PM25',
-                # 'pm10'     : 'PM10',
-                # 'h2so4'    : 'H2SO4'
+                'pilot_mscfh'  : 'Pilot Natural Gas',
+                'fuel_rfg'     : 'Refinery Fuel Gas',
+                'fuel_ng'      : 'Natural Gas',
+                'coke_tons'    : 'Calcined Coke',
+                'nox'          : 'NOx',
+                'co'           : 'CO',
+                'so2'          : 'SO2',
+                'voc'          : 'VOC', 
+                'pm'           : 'PM',
+                'pm25'         : 'PM25',
+                'pm10'         : 'PM10',
+                'h2so4'        : 'H2SO4'
+                'co2'          : 'CO2'
                 }
-
         col_order = ['WED Pt', 'Equipment', 'Month',
-                     'Coker Fuel Gas', 'Natural Gas (Pilot)', 'CO2']
-                
+                     'Coker Fuel Gas', 'Pilot Natural Gas', 'CO2']
         annual_df = (annual_df.replace({'equipment': self.annual_equip
                                                      .unitkey_name})
                               .rename(columns=output_colnames))
-        
         annual_df = annual_df[col_order]
-        
         return annual_df
         
     def groupby_and_write_annual(self, annual_df):
@@ -146,16 +132,16 @@ class AnnualParser(object):
         
         # create MultiIndex for renaming columns
         if not self.is_toxics:
-            arr_col = [['Coker Fuel Gas', 'Natural Gas (Pilot)', 'CO2'],
+            arr_col = [['Coker Fuel Gas', 'Pilot Natural Gas', 'CO2'],
                        (['mscf'] * 2) + (['tons'] * 1)]
-        else:
-            if not self.is_calciner_toxics:
-                arr_col = [['Refinery Fuel Gas', 'Natural Gas'] + cf.toxics_with_EFs,
-                           (['mscf'] * 2) + (['lbs'] * len(cf.toxics_with_EFs))]
-            else:
-                arr_col = [['Calcined Coke'] + cf.calciner_toxics_with_EFs,
-                           (['tons'] * 1) + (['lbs'] * len(cf.calciner_toxics_with_EFs))]
-        
+#        else:
+#            if not self.is_calciner_toxics:
+#                arr_col = [['Refinery Fuel Gas', 'Natural Gas'] + cf.toxics_with_EFs,
+#                           (['mscf'] * 2) + (['lbs'] * len(cf.toxics_with_EFs))]
+#            else:
+#                arr_col = [['Calcined Coke'] + cf.calciner_toxics_with_EFs,
+#                           (['tons'] * 1) + (['lbs'] * len(cf.calciner_toxics_with_EFs))]
+#        
         MI_col = pd.MultiIndex.from_arrays(arr_col, names=('Parameter', 'Units'))
             # df.index.names = (['Quarter', 'Equipment']) ; q_gb.head()
             # not sure if the tuple is necessary, can just pass a list
