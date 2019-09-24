@@ -198,6 +198,7 @@ class AnnualParser(object):
         annQ.rename(columns={'Month':'Quarter'}, inplace=True)
         
         eXq_gb = annQ.groupby(['WED Pt', 'Equipment', 'Quarter'], sort=False).sum()
+        eXq_gb.columns = MI_col
         eXq_gb.name = 'by_Equip_x_Quarter'
         
         # Groupby [quarter, equipment] --> [quarter, equipment] x pollutants
@@ -219,7 +220,8 @@ class AnnualParser(object):
             print('Writing output to files.')
         
             for df in frames:        
-                outname = (self.out_dir_child+str(self.year_to_calc)+'_'
+                outname = (self.out_dir_child
+                           +str(self.year_to_calc)+'_'
                            +df.name+'{}.csv')
                 if not self.is_toxics:
                     outname = outname.format('')
@@ -232,4 +234,4 @@ class AnnualParser(object):
                 df.round(2).to_csv(outname)
         
         if self.return_dfs: # DEBUG
-            return frames   
+            return frames
