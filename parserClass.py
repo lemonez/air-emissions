@@ -112,7 +112,7 @@ class AnnualParser(object):
         output_colnames = {
                 'month'    : 'Month',
                 'equipment': 'Equipment',
-                'cokerfg_mscfh': 'Refinery Fuel Gas',
+                'cokerfg_mscfh': 'Coker Fuel Gas',
                 'pilot_mscfh'  : 'Natural Gas (Pilot)',
                 'co2'      : 'CO2'
                 # 'fuel_rfg' : 'Refinery Fuel Gas',
@@ -128,7 +128,8 @@ class AnnualParser(object):
                 # 'h2so4'    : 'H2SO4'
                 }
 
-        col_order = ['WED Pt', 'Equipment', 'Month', 'Refinery Fuel Gas', 'CO2']
+        col_order = ['WED Pt', 'Equipment', 'Month',
+                     'Coker Fuel Gas', 'Natural Gas (Pilot)', 'CO2']
                 
         annual_df = (annual_df.replace({'equipment': self.annual_equip
                                                      .unitkey_name})
@@ -145,8 +146,8 @@ class AnnualParser(object):
         
         # create MultiIndex for renaming columns
         if not self.is_toxics:
-            arr_col = [['Refinery Fuel Gas','CO2'],
-                       (['mscf'] * 1) + (['tons'] * 1)]
+            arr_col = [['Coker Fuel Gas', 'Natural Gas (Pilot)', 'CO2'],
+                       (['mscf'] * 2) + (['tons'] * 1)]
         else:
             if not self.is_calciner_toxics:
                 arr_col = [['Refinery Fuel Gas', 'Natural Gas'] + cf.toxics_with_EFs,
