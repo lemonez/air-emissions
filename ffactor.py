@@ -1,8 +1,7 @@
+import time
 import pandas as pd
 
-# print timestamp for checking import timing
-import time
-print(time.strftime("%H:%M:%S")+'\tmodule \''+__name__+'\' reloaded.')
+#print(time.strftime("%H:%M:%S")+'\tmodule \''+__name__+'\' reloaded.')
 
 """ 40 CFR Appendix A-7 to Part 60 - Test Method 19 -
     Determination of sulfur dioxide removal efficiency and 

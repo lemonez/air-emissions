@@ -1,11 +1,11 @@
-# global import external libraries
+import time
 import pandas as pd
 from collections import OrderedDict
-import time
 
-start_time_seconds = time.time()
-start_time = time.strftime("%H:%M:%S")
-print(start_time+'\tmodule \''+__name__+'\' began reloading.')
+# print timestamp for checking import timing
+# start_time_seconds = time.time()
+# start_time = time.strftime("%H:%M:%S")
+# print(start_time+'\tmodule \''+__name__+'\' began reloading.')
 
 ##============================================================================##
 
@@ -30,9 +30,6 @@ class AnnualEquipment(object):
     
     def __init__(self):
         """Constructor for parsing annual emission-unit data."""
-        # print(repr(self.__class__)+' init\'ed (**DEBUG**)')
-        print('AnnualEquipment() init\'ed')
-        
         self.year           = cf.data_year
         self.months_to_calc = cf.months_to_calculate
         self.month_offset   = cf.month_offset
@@ -137,9 +134,7 @@ class AnnualCoker(AnnualEquipment):
     
     def __init__(self, annual_equip):
         """Constructor for parsing annual coker data."""
-#        super().__init__()
         self.annual_equip = annual_equip
-        print('AnnualCoker() init\'ed')
     
     def unmerge_annual_ewcoker(self):
         """Unmerge E/W coker data."""
@@ -170,19 +165,19 @@ class AnnualCoker(AnnualEquipment):
         df['pilot_mscfh_w'] = pd.np.nan
         
         # if both units down
-        df.loc[(df['rfg_mscfh_e'].isnull())  & (df['rfg_mscfh_w'].isnull()),
+        df.loc[(df['cokerfg_mscfh_e'].isnull())  & (df['cokerfg_mscfh_w'].isnull()),
                 ['pilot_mscfh_e', 'pilot_mscfh_w']] = pd.np.nan
 
         # if east down and west up
-        df.loc[(df['rfg_mscfh_e'].isnull())  & (df['rfg_mscfh_w'].notnull()),
+        df.loc[(df['cokerfg_mscfh_e'].isnull())  & (df['cokerfg_mscfh_w'].notnull()),
                 'pilot_mscfh_w'] = df['pilot_mscfh']
 
         # if west down and east up
-        df.loc[(df['rfg_mscfh_e'].notnull()) & (df['rfg_mscfh_w'].isnull()),
+        df.loc[(df['cokerfg_mscfh_e'].notnull()) & (df['cokerfg_mscfh_w'].isnull()),
                 'pilot_mscfh_e'] = df['pilot_mscfh']
 
         # if both units up
-        df.loc[(df['rfg_mscfh_e'].notnull()) & (df['rfg_mscfh_w'].notnull()),
+        df.loc[(df['cokerfg_mscfh_e'].notnull()) & (df['cokerfg_mscfh_w'].notnull()),
                 ['pilot_mscfh_e', 'pilot_mscfh_w']] = df['pilot_mscfh'] / 2
         
         return df
@@ -209,7 +204,7 @@ class AnnualCoker(AnnualEquipment):
         dat.replace('--', pd.np.nan, inplace=True)
 
         if not pilot:
-            dat.columns = ['tstamp', 'o2_%', 'co2_%', 'rfg_mscfh']
+            dat.columns = ['tstamp', 'o2_%', 'co2_%', 'cokerfg_mscfh']
         elif pilot:
             dat.columns = ['tstamp', 'pilot_mscfh']
 
@@ -224,7 +219,8 @@ class MonthlyCoker(AnnualCoker):
         'coker_w'
     """
 # replace 'rfg_mscfh' with 'fuel_rfg' once units are figured out
-    col_name_order = ['equipment', 'month', 'rfg_mscfh', 'co2']
+    col_name_order = ['equipment', 'month',
+                      'cokerfg_mscfh', 'pilot_mscfh', 'co2']
     
     def __init__(self,
                  unit_key,
@@ -262,7 +258,6 @@ class MonthlyCoker(AnnualCoker):
                                             self.cokerFG_monthly,
                                             self.annual_equip.fpath_FG_chem,
                                             self.ts_interval)
-        print('MonthlyCoker() init\'ed')
     
     def calculate_monthly_equip_emissions(self):
         """Return monthly emissions as pd.Series."""
@@ -306,21 +301,21 @@ class MonthlyCoker(AnnualCoker):
         if self.unit_key == 'coker_w':
             df = w_df
 
-        df['rfg_scfh'] = (df['rfg_mscfh']
+        df['cokerfg_scfh'] = (df['cokerfg_mscfh']
                             * 1000 
                             * self.HHV_cokerFG
                             * 1/1000000
                             * self.f_factor_cokerFG
                             * 20.9 / (20.9 - df['o2_%']))
 
-        df['pilot_scfh'] = (df['rfg_mscfh']
+        df['pilot_scfh'] = (df['pilot_mscfh']
                             * 1000 
                             * self.HHV_NG
                             * 1/1000000
                             * self.f_factor_NG
                             * 20.9 / (20.9 - df['o2_%']))
 
-        df['dscfh'] = df['rfg_scfh'] + df['pilot_scfh']
+        df['dscfh'] = df['cokerfg_scfh'] + df['pilot_scfh']
         df['co2']   = df['co2_%'] * df['dscfh'] * 5.18E-7
 
         return df.loc[self.ts_interval[0]:self.ts_interval[1]]
@@ -328,10 +323,10 @@ class MonthlyCoker(AnnualCoker):
 ##============================================================================##
 
 # print timestamp for checking import timing
-end_time_seconds = time.time()
-end_time = time.strftime("%H:%M:%S")
-print(end_time+'\tmodule \''+__name__+'\' finished reloading.')
+# end_time_seconds = time.time()
+# end_time = time.strftime("%H:%M:%S")
+# print(end_time+'\tmodule \''+__name__+'\' finished reloading.')
 
-total_time = round(end_time_seconds - start_time_seconds)
-print('\t(\''+__name__+'\' total module load time: '
-             +str(total_time)+' seconds)')
+# total_time = round(end_time_seconds - start_time_seconds)
+# print('\t(\''+__name__+'\' total module load time: '
+             # +str(total_time)+' seconds)')

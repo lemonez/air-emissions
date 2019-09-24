@@ -15,10 +15,12 @@ def main():
     #    args_dict['log_suffix'] = '_' + args_dict['log_suffix']
     append_slash_to_dir(args_dict, ['out_dir', 'out_dir_child'])
     args_dict['out_dir_child'] = args_dict['out_dir'] + args_dict['out_dir_child']
+    if args_dict['quiet']:
+        args_dict['verbose_logging'] = False
     
     update_config(cf, args_dict)
 
-    if not cf.quiet:
+    if cf.verbose_logging or cf.view_config:
         print('\nConfiguration options specified:\n')
         for k,v in args_dict.items():
             print('    {:<22}: {}'.format(k,v))
@@ -118,7 +120,6 @@ def get_args():
     # maybe change verbosity options; this may be confusing
     group3.add_argument('-q', '--quiet',
 					    action='store_true',
-#                        default=cf.verbose_logging, # currently only specified at CL
 					    help='Suppress verbose console logging.')
     group3.add_argument('-v', '--view_config',
 					    action='store_true',

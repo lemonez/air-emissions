@@ -1,11 +1,11 @@
+import time
 import pandas as pd
 
+# module-level imports
 import config as cf
 import equipClass
 
-# print timestamp for checking import timing
-import time
-print(time.strftime("%H:%M:%S")+'\tmodule \''+__name__+'\' reloaded.')
+#print(time.strftime("%H:%M:%S")+'\tmodule \''+__name__+'\' reloaded.')
 
 class AnnualParser(object):
     """Handles annual facility-wide emissions calculations."""
@@ -37,7 +37,7 @@ class AnnualParser(object):
         self.is_calciner_toxics = cf.calciner_toxics
         self.write_month_names  = cf.write_month_names
         self.month_map          = cf.month_map
-        self.verbose_calc_status = cf.verbose_calc_status
+        self.verbose_logging    = cf.verbose_logging
         
         self.all_equip_dict     = {}
 
@@ -64,9 +64,10 @@ class AnnualParser(object):
             each_equip_ser = []
             annual_coker = equipClass.AnnualCoker(self.annual_equip)
             for month in self.months_to_calc:
-                if self.verbose_calc_status:
+                if self.verbose_logging:
                     print('\tCalculating month {:2d}{}emissions for {}...'
-                                .format(month, self.toxics_text, equip))
+                                .format(month, self.toxics_text,
+                                        self.annual_equip.unitkey_name[equip]))
                 if not self.is_toxics:
                     if equip in ['coker_e', 'coker_w']:
                         emis = (equipClass
@@ -111,7 +112,8 @@ class AnnualParser(object):
         output_colnames = {
                 'month'    : 'Month',
                 'equipment': 'Equipment',
-                'rfg_mscfh': 'Refinery Fuel Gas',
+                'cokerfg_mscfh': 'Refinery Fuel Gas',
+                'pilot_mscfh'  : 'Natural Gas (Pilot)',
                 'co2'      : 'CO2'
                 # 'fuel_rfg' : 'Refinery Fuel Gas',
                 # 'fuel_ng'  : 'Natural Gas',

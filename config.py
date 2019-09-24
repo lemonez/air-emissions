@@ -1,8 +1,7 @@
 import time, os
 import pandas as pd
-from collections import OrderedDict
 
-print(time.strftime("%H:%M:%S")+'\tmodule \''+__name__+'\' reloaded.')
+#print(time.strftime("%H:%M:%S")+'\tmodule \''+__name__+'\' reloaded.')
 
 ####################
 ##BEGIN USER EDITS##
@@ -33,7 +32,7 @@ calciner_toxics = False
 write_month_names = True # write month names (abbrevs) in output
 
 # select verbosity of calculation status logging to console
-verbose_calc_status = True
+verbose_logging = True
 
 # select timeframe and equipment for emissions calculations
 # defaults: last year, all months, all equipment
