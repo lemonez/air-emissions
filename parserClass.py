@@ -114,7 +114,7 @@ class AnnualParser(object):
                 'pm'           : 'PM',
                 'pm25'         : 'PM25',
                 'pm10'         : 'PM10',
-                'h2so4'        : 'H2SO4'
+                'h2so4'        : 'H2SO4',
                 'co2'          : 'CO2'
                 }
         col_order = ['WED Pt', 'Equipment', 'Month',
