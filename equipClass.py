@@ -38,17 +38,17 @@ class AnnualEquipment(object):
         self.month_offset   = cf.month_offset
         
         # directories
-        self.data_prefix    = cf.data_dir                           # all input data files
-        self.annual_prefix  = self.data_prefix+'annual/'            # data that changes monthly/annually
-        self.static_prefix  = self.data_prefix+'static/'            # static data
+        self.data_prefix    = cf.data_dir               # all input data files
+        self.annual_prefix  = self.data_prefix+'annual/'# data that changes monthly/annually
+        self.static_prefix  = self.data_prefix+'static/'# static data
         
         # files
-        self.fname_eqmap    = 'equipmap.csv'                        # all equipment names / IDs    
-        self.fname_FG_chem  = 'chemicals_FG.csv'                    # FG static chemical data
-        self.fname_NG_chem  = 'chemicals_NG.csv'                    # NG static chemical data    
-        self.fname_NG       = str(self.year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
+        self.fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
+        self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
+        self.fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
+        self.fname_NG       = str(self.year)+'_analyses_NG.xlsx'# NG-sample lab-test data
         self.fname_cokerFG  = str(self.year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
-        self.fname_ewcoker  = '2019_data_EWcoker.xlsx'              # coker cems, fuel, flow data
+        self.fname_ewcoker  = '2019_data_EWcoker.xlsx'  # coker cems, fuel, flow data
         
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
@@ -103,7 +103,7 @@ class AnnualEquipment(object):
             'Units'      : 'units'
             }
         
-        equip_info = (pd.read_csv(self.fpath_eqmap)).rename(columns=col_map)
+        equip_info = pd.read_csv(self.fpath_eqmap).rename(columns=col_map)
         equip_info['param'] = equip_info['param'].str.strip().str.lower()
         equip_info['units'] = equip_info['units'].str.strip().str.lower()
         equip_info.replace({'dry o2': 'o2'}, inplace=True)
@@ -165,26 +165,25 @@ class AnnualCoker(AnnualEquipment):
         """Distribute pilot gas to E/W cokers depending on operational status."""
         
         df = self.merge_annual_ewcoker()
-        
-        # DUMMY DATA
-        df['pilot_mscfh'] = 0.2
-        # df.loc['2019-04-29 22:00:00':'2019-04-29 23:00:00', 'rfg_mscfh_e'] = pd.np.nan
-        # df.loc['2019-04-30 00:00:00':'2019-04-30 00:00:00', ['rfg_mscfh_e', 'rfg_mscfh_w']] = [pd.np.nan, 110]
 
         df['pilot_mscfh_e'] = pd.np.nan
         df['pilot_mscfh_w'] = pd.np.nan
         
         # if both units down
-        df.loc[(df['rfg_mscfh_e'].isnull())  & (df['rfg_mscfh_w'].isnull()),  ['pilot_mscfh_e', 'pilot_mscfh_w']] = pd.np.nan
+        df.loc[(df['rfg_mscfh_e'].isnull())  & (df['rfg_mscfh_w'].isnull()),
+                ['pilot_mscfh_e', 'pilot_mscfh_w']] = pd.np.nan
 
         # if east down and west up
-        df.loc[(df['rfg_mscfh_e'].isnull())  & (df['rfg_mscfh_w'].notnull()), 'pilot_mscfh_w'] = df['pilot_mscfh']
+        df.loc[(df['rfg_mscfh_e'].isnull())  & (df['rfg_mscfh_w'].notnull()),
+                'pilot_mscfh_w'] = df['pilot_mscfh']
 
         # if west down and east up
-        df.loc[(df['rfg_mscfh_e'].notnull()) & (df['rfg_mscfh_w'].isnull()),  'pilot_mscfh_e'] = df['pilot_mscfh']
+        df.loc[(df['rfg_mscfh_e'].notnull()) & (df['rfg_mscfh_w'].isnull()),
+                'pilot_mscfh_e'] = df['pilot_mscfh']
 
         # if both units up
-        df.loc[(df['rfg_mscfh_e'].notnull()) & (df['rfg_mscfh_w'].notnull()), ['pilot_mscfh_e', 'pilot_mscfh_w']] = df['pilot_mscfh'] / 2
+        df.loc[(df['rfg_mscfh_e'].notnull()) & (df['rfg_mscfh_w'].notnull()),
+                ['pilot_mscfh_e', 'pilot_mscfh_w']] = df['pilot_mscfh'] / 2
         
         return df
     
@@ -192,18 +191,28 @@ class AnnualCoker(AnnualEquipment):
         """Merge E/W coker data."""
         ecoker_df = self.parse_annual_ewcoker(cols=[0,1,2,3])
         wcoker_df = self.parse_annual_ewcoker(cols=[6,7,8,9])
-
-        merged = ecoker_df.merge(wcoker_df, how='outer', left_index=True, right_index=True, suffixes=('_e', '_w'), copy=True)
-        return merged
+        pilot_df  = self.parse_annual_ewcoker(cols=[12,13], pilot=True)
         
-    def parse_annual_ewcoker(self, cols):
+        merged1 = ecoker_df.merge(wcoker_df, how='outer',
+                                    left_index=True, right_index=True,
+                                    suffixes=('_e', '_w'), copy=True)
+        merged2 = merged1.merge(pilot_df, how='outer',
+                                    left_index=True, right_index=True,
+                                                           copy=True)
+        return merged2
+    
+    def parse_annual_ewcoker(self, cols, pilot=False):
         """Read in raw coker data."""
         sheet = 'East & West Coker Data'
-        dat = pd.read_excel(self.annual_equip.fpath_ewcoker, sheet_name=sheet,
-                                                    usecols=cols, header=3)
-
+        dat = pd.read_excel(self.annual_equip.fpath_ewcoker,
+                            sheet_name=sheet, usecols=cols, header=3)
         dat.replace('--', pd.np.nan, inplace=True)
-        dat.columns = ['tstamp', 'o2_%', 'co2_%', 'rfg_mscfh']
+
+        if not pilot:
+            dat.columns = ['tstamp', 'o2_%', 'co2_%', 'rfg_mscfh']
+        elif pilot:
+            dat.columns = ['tstamp', 'pilot_mscfh']
+
         dat.set_index('tstamp', inplace=True)
         return dat
 
