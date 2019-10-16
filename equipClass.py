@@ -16,19 +16,25 @@ import ffactor as ff
 class AnnualEquipment(object):
     """Contains annual facility-wide data for emissions calculations."""
     """
-    This class contains information for parsing monthly emissions for
-    equipment units. Annual data is parsed and stored here as class variables.
-    Each instance represents one year of data. from one refinery equipment unit, and
-    contains methods for calculating monthly emissions.
+    This class contains methods for parsing monthly emissions for refinery
+    equipment units. Annual data is parsed and stored here as instance attributes,
+    one instance representing one calendar year of data.
     
     Abbreviations:
         EF   = emission factor
-        FG   = fuel gas (general term; includes RFG, NG, flare gas)
+        FG   = fuel gas (general term; RFG, cokerFG, flare gas)
         RFG  = refinery fuel gas
         NG   = natural gas
+        CVTG = crude vac tail gas
+        CEMS = continuous emission monitoring system
+        GUID = global unique identifier
     """
     def __init__(self):
         """Constructor for parsing annual emission-unit data."""
+        start_time_seconds = time.time()
+        start_time = time.strftime("%H:%M:%S")
+        print('AnnualEquipment.__init__() began at '+start_time)
+        
         self.year           = cf.data_year
         self.months_to_calc = cf.months_to_calculate
         self.month_offset   = cf.month_offset
@@ -37,34 +43,392 @@ class AnnualEquipment(object):
         self.data_prefix    = cf.data_dir               # all input data files
         self.annual_prefix  = self.data_prefix+'annual/'# data that changes monthly/annually
         self.static_prefix  = self.data_prefix+'static/'# static data
+        self.CEMS_dir       = self.annual_prefix+'CEMS/'# monthly CEMS data
         
         # files
         self.fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
         self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
         self.fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
-        self.fname_NG       = str(self.year)+'_analyses_NG.xlsx'# NG-sample lab-test data
+        self.fname_RFG      = str(self.year)+'_analyses_RFG.xlsx'   # RFG-sample lab-test data
+        self.fname_NG       = str(self.year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
+        self.fname_CVTG     = str(self.year)+'_analyses_CVTG.xlsx'  # CVTG-sample lab-test data
+        self.fname_flare    = str(self.year)+'_analyses_flare.xlsx' # flare-gas sample lab-test data
         self.fname_cokerFG  = str(self.year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
-        self.fname_ewcoker  = '2019_data_EWcoker.xlsx'  # coker cems, fuel, flow data
+        self.fname_ewcoker  = str(self.year)+'_data_EWcoker.xlsx'   # coker CEMS, fuel, flow data
+        self.fname_fuel     = str(self.year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
+        self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
+        self.fname_flarefuel= str(self.year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
+        self.fname_h2stack  = str(self.year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
+        self.fname_flareEFs = str(self.year)+'_EFs_flare.xlsx'      # EFs for H2 flare
+        self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
+        self.fname_toxicsEFs_calciners = str(year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
+        self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
         
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
         self.fpath_FG_chem  = self.static_prefix+self.fname_FG_chem
         self.fpath_NG_chem  = self.static_prefix+self.fname_NG_chem
+        self.fpath_RFG      = self.annual_prefix+self.fname_RFG
         self.fpath_NG       = self.annual_prefix+self.fname_NG
+        self.fpath_flare    = self.annual_prefix+self.fname_flare
+        self.fpath_CVTG     = self.annual_prefix+self.fname_CVTG
         self.fpath_cokerFG  = self.annual_prefix+self.fname_cokerFG
         self.fpath_ewcoker  = self.annual_prefix+self.fname_ewcoker
+        self.fpath_fuel     = self.annual_prefix+self.fname_fuel
+        self.fpath_coke     = self.annual_prefix+self.fname_coke
+        self.fpath_flarefuel= self.annual_prefix+self.fname_flarefuel
+        self.fpath_h2stack  = self.annual_prefix+self.fname_h2stack 
+        self.fpath_flareEFs = self.annual_prefix+self.fname_flareEFs
+        self.fpath_toxics_EFs   = self.annual_prefix+self.fname_toxicsEFs
+        self.fpath_toxics_EFs_calciners = self.annual_prefix \
+                                            +self.fname_toxicsEFs_calciners
+        self.fpath_EFs      = self.annual_prefix+self.fname_EFs
         
         # consts, dicts, dfs (indented descriptions follow variable assignments)
         self.ts_intervals   = self.generate_ts_interval_list()
-            
+                             # list of tuples: [monthly intervals (start, end)]
+        
         # equipment mapping
         self.equip          = self.parse_equip_map()
+                             # df: all equipment/PItag data
+        self.equip_ptags    = self.generate_equip_ptag_dict()
+                             # dict: {equipment: [PItag, PItag, ...]}
+        self.ptags_pols     = self.generate_ptag_pol_dict()
+                             # dict: {PItag: [pollutant, pollutant, ...]}
         self.unitID_equip   = self.generate_unitID_unitkey_dict()
+                             # dict: {WED Pt: Python GUID}
+        self.ordered_equip  = self.generate_ordered_equip_list()
+                             # list: [Python GUIDs ordered ascending by WED Pt]
         self.unitkey_name   = self.generate_unitkey_unitname_dict()
+                             # dict: {Python GUID: pretty name for output}
         
-        # fuel analysis data
+        # fuel analysis, usage, and EFs
+        self.RFG_annual     = ff.parse_annual_FG_lab_results(self.fpath_RFG)
+                             # df: annual RFG lab-test results
         self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_NG)
+                             # df: annual NG lab-test results
         self.cokerFG_annual = ff.parse_annual_FG_lab_results(self.fpath_cokerFG)
+                             # df: annual cokerFG lab-test results
+#        self.coker_annual   = ff.parse_annual_FG_lab_results(self.fpath_coker)
+#                             # df: annual coker-gas lab-test results
+        self.flare_annual   = ff.parse_annual_FG_lab_results(self.fpath_flare)
+                             # df: annual flare-gas lab-test results
+        self.CVTG_annual    = ff.parse_annual_FG_lab_results(self.fpath_CVTG)
+                             # df: annual CVTG lab-test results
+        self.CEMS_annual    = self.parse_all_monthly_CEMS()
+                             # df: annual CEMS data
+        self.fuel_data      = self.parse_annual_fuel()
+                             # df: hourly fuel data for all equipment
+        self.coke_data      = self.parse_annual_coke()
+                             # df: hourly coke data for all calciners
+        self.flarefuel_data = em.parse_annual_flare_fuel()
+                             # df: hourly flare-gas data
+        self.h2stack_data   = self.parse_annual_h2stack()
+                             # df: hourly coke data for all calciners
+        self.flareEFs       = self.parse_annual_flare_EFs()
+                             # df: EFs for flare gas
+        self.toxicsEFs      = self.parse_annual_toxics_EFs()
+                             # df: EFs for toxics
+        self.toxicsEFs_calciners = self.parse_calciner_toxics_EFs()
+                             # df: EFs for calciner toxics
+        self.EFs            = self.parse_annual_EFs()
+                             # dict: {integer month: (EFs df, EFunits df, equip_EF_dict)}
+
+        # formatting
+        self.col_name_order = ['equipment', 'month', 'fuel_rfg', 'fuel_ng',
+                               'nox', 'co', 'so2', 'voc',
+                               'pm', 'pm25', 'pm10', 'h2so4']
+                             # list: col order for emissions summaries
+        
+        end_time_seconds = time.time()
+        end_time = time.strftime("%H:%M:%S")
+        print(__class__'.__init__() ended at '+end_time)
+
+        total_time = round(end_time_seconds - start_time_seconds)
+        print('Total init time: '+str(total_time)+' seconds)')
+    
+    def parse_annual_EFs(self):
+        """Parse EF tabs for specified months; return dict of tuples."""
+        """
+        dict structure: {integer month: (EFs df, EFunits df, equip_EF_dict)}
+        """
+        annual_EF_container = {}
+        for month in self.months_to_calc:
+            tabname = self.ts_intervals[month-1][0].strftime('%Y_%m') # monthly EF excel tab named as 'YYYY_MM'
+            annual_EF_container[month] = self.parse_EF_tab(tabname) # tuple (a, b, c) is saved to dict 
+        return annual_EF_container
+    
+    def parse_EF_tab(self, tab):
+        """Read monthly EF data, return tuple (values df, units df, {equip:[EFs]} dict."""
+        """
+            *df: value of each EF for each equipment
+            *df: units of each EF for each equipment
+            *dict: {equipment: {dict of EFs}}
+        """
+        
+        efs = pd.read_excel(self.fname_EFs, sheet_name=tab, skiprows=5,
+                                            header=None, usecols='A:E')
+        efs.columns = ['unit_id', 'src_name_BP', 'pollutant', 'ef', 'units']
+        
+        # forward-fill the IDs/names
+        efs['unit_id'].fillna(method='ffill', inplace=True)
+        efs['src_name_BP'].fillna(method='ffill', inplace=True)
+        efs['unit_id'] = efs['unit_id'].astype(str)
+            #efs['src_id'] = efs['src_id'].apply(lambda x: int(x) if isinstance(x, int) or isinstance(x, float) else str(x))
+        
+        # strip whitespace, make lowercase to standardize the values
+        efs['pollutant'] = efs['pollutant'].str.strip().str.lower()
+        efs['units'] = efs['units'].str.strip().str.lower()
+    #    efs['pollutant'].replace({'pm10':'pm'}, inplace=True)
+        efs['units'].replace({'lb pm/ton coke':'lb/ton coke'}, inplace=True)
+        
+        # subset pollutant EFs, discard cems, change EFs to numeric
+        efs = efs[efs['pollutant'].isin(['nox', 'co', 'so2', 'voc',
+                                         'pm', 'pm25', 'pm10', 'h2so4'])]
+        
+        # discard CEMS so that to_numeric() does not throw error
+        efs = efs[~efs['ef'].str.lower().isin(['cems'])]
+        efs['ef'] = pd.to_numeric(efs['ef'])
+        
+        efs['unit_key'] = efs['unit_id'] # for Python unit ID
+        
+        # map BP IDs to Python IDs
+        efs = efs.replace({'unit_key': self.unitID_equip})
+                          #,'unit_name':equip_name_map})
+    # begin temporary workaround   
+        # for now, set calciner EFs to 0.0 for pollutants calculated from coke
+        # efs.loc[( ((efs['unit_id'] == '70') | (efs['unit_id'] == '71')) & 
+                  # (efs['pollutant'].isin(['co', 'pm', 'h2so4'])) 
+                # ), 'ef'] = 0
+    # end temporary workaround
+        
+        # if PM fractions are all being set to equal PM total, then replace EFs
+        if not cf.calc_pm_fractions:
+            efs.loc[efs['pollutant'].isin(['pm25','pm10']),'ef'] = np.nan
+            efs.fillna(method='ffill', limit=2,axis=0, inplace=True)
+        
+        # pare down the EF dataframe to be accessed for conversion factors
+        pollutant_units = (efs[['unit_key','pollutant','units']]
+                            .groupby(['unit_key','pollutant'])
+                            .sum())
+                # efs[(st.index == 'crude_rfg') & (efs['pollutant'] == 'co')]['units'].loc['crude_rfg']
+
+        equip_EF_dict = pd.pivot_table(efs,
+                                       index=['unit_key'],
+                                       columns='pollutant',
+                                       values='ef').T.to_dict()
+        
+        return efs, pollutant_units, equip_EF_dict
+    
+    def parse_calciner_toxics_EFs(self):
+        """Parse calciner EF data, return pd.DataFrame."""
+        """
+        source (?): https://www3.epa.gov/ttn/chief/efpac/protocol/Protocol%20Report%202015.pdf
+        """
+        caltox = pd.read_excel(self.fpath_toxics_EFs_calciners,
+                                header=7, skipfooter=49, usecols=[0, 4, 6])
+        caltox = caltox[1:]
+        caltox.columns = ['unit_id', 'pollutant', 'ef']
+        # EFs are the same b/w calciners, so for now we can drop calciner_2 EFs
+        caltox = caltox[(caltox['unit_id'] == 70)]# | (caltox['unit_id'] == 71)]
+        caltox = caltox[(caltox['pollutant'] != '1,1,1-Trichloroethane') &
+                        (caltox['pollutant'] != 'Vanadium')]
+        caltox['units'] = 'lbs/ton calcined coke'
+        return caltox
+    
+    def parse_annual_toxics_EFs(self):
+        """Parse EFs for toxics; return pd.DataFrame."""
+        toxics = pd.read_excel(self.fpath_toxicsEFs, skipfooter=5,
+                               #skiprows=3,
+                               header=3, usecols=[0,2,3])
+        
+        # because the source test EF for Pb for boiler #5 equals
+        # the EF for the rest of the equipment, drop that row and 
+        # treat it the same; could add exception for boiler #5
+        # in the future but not necessary for 2018 emissions
+        toxics = toxics.iloc[:-1]
+        toxics.rename(columns={'Chemical Name':'pollutant',
+                               'ICR - EF'     : 'ef',
+                               'EF Units'     : 'units'},
+                      inplace=True)
+        return toxics
+    
+    def parse_annual_flare_EFs(self):
+        """Read EFs from H2-flare gas data; return pd.DataFrame."""
+        # read, clean, format, subset data
+        df = pd.read_excel(self.path_flareEFs, sheet_name='Summary',
+                                            skiprows=29, usecols=[0,1,2])
+        
+        df.columns = df.columns.str.lower()
+        df.rename(columns={'value':'ef'}, inplace=True)
+        
+        df['pollutant'] = df['pollutant'].str.strip().str.lower()
+        df['units'] = df['units'].str.strip().str.lower()
+        df.loc[:,'flare_on'] = 'unassigned'
+        
+        # create separate EF DataFrames for pilot gas vs. active flaring
+        flare_off_EFs = df.iloc[0:5]
+        flare_off_EFs.loc[:,'flare_on'] = False
+        flare_on_EFs = df.iloc[8:13]
+        flare_on_EFs.loc[:,'flare_on'] = True
+        
+        # combine cleaned-up DataFrames and cast as numeric
+        flare_EFs = pd.concat([flare_off_EFs, flare_on_EFs])
+        flare_EFs.loc[:,'ef'] = pd.to_numeric(flare_EFs.loc[:,'ef'])
+        return flare_EFs
+    
+    def parse_annual_h2stack(self):
+        """Read annual stack-flow data for H2 plant, return pd.DataFrame."""
+        stack = pd.read_excel(self.fpath_h2stack, skiprows=2)
+        stack['tstamp'] = pd.to_datetime(stack['1 h'])
+        stack.set_index('tstamp', inplace=True)
+        stack['dscfh'] = stack['46FY38B.PV'] * 1000 # convert to dscfh
+        stack = pd.DataFrame(stack['dscfh'])
+        stack['dscfh'] = pd.to_numeric(stack.loc[:,'dscfh'], errors='coerce')
+        
+        stack = stack.clip(lower=0)
+        return stack
+    
+    def parse_annual_flare_fuel(self):
+        """Read annual fuel flow data for H2-plant flare, return pd.DataFrame."""
+        flare_df = pd.read_excel(self.fpath_flarefuel, skiprows=4)
+        
+        flare_df.rename(columns={'1 h':'tstamp',
+                                 '46FI202.PV':'flare_header_flow',
+                                 '46FI231.PV':'discharge_to_flare',
+                                 '46PC60.OP':'valve'}
+                        , inplace=True)
+        flare_df['tstamp'] = pd.to_datetime(flare_df['tstamp'])
+        flare_df.set_index('tstamp', inplace=True)
+        flare_df.replace({"[-11059] No Good Data For Calculation": np.nan}, inplace=True)
+        flare_df['flare_header_flow'] = flare_df['flare_header_flow'].clip(lower=0)
+        flare_df['discharge_to_flare'] = flare_df['discharge_to_flare'].clip(lower=0)
+        return flare_df
+    
+    def parse_annual_coke(self):
+        """Read annual coke data for calciners, return pd.DataFrame."""
+        coke_df = pd.read_excel(self.fpath_coke, skiprows=[0,1], header=[0,1])
+        coke_df.columns = coke_df.columns.droplevel(1)
+        coke_df.columns.name = 'unit_key'
+        
+        # sum hearths 1 and 2, rename, reindex
+        coke_df['calciner_1'] = coke_df['20WK5000.PV'] + coke_df['20WK5001.PV']
+        coke_df.rename(columns={'20WK5002.PV':'calciner_2'}, inplace=True)
+        coke_df['tstamp'] = pd.to_datetime(coke_df['1h'])
+        coke_df.set_index('tstamp', inplace=True)
+        coke_df = coke_df[['calciner_1', 'calciner_2']]
+        
+        coke_df = coke_df.clip(lower=0)
+        return coke_df    
+    
+    def parse_annual_fuel(self):
+        """Read annual fuel data for all equipment, return pd.DataFrame."""
+        """
+        df structure: (WED Pt. x Timestamp)
+        df size: <2MB storage for year of data
+        """
+        
+        fuel = pd.read_excel(self.fpath_fuel, skiprows=9, header=list(range(6)))
+        
+        fuel.columns = fuel.columns.droplevel(5)
+        fuel.columns = fuel.columns.droplevel(4)
+        fuel.columns = fuel.columns.droplevel(1)
+        
+        fuel.set_index(fuel.columns.tolist()[0], inplace=True)
+        fuel.index.name = 'tstamp'
+        
+        # subset out columns of interest,
+        # because (usecols='A:AC, AF:AL, AP:AR') gives ValueError
+        fuel = pd.concat(
+                    [fuel.iloc[:,0:28], fuel.iloc[:,30:38], fuel.iloc[:,40:43]],
+                    axis=1)
+        fuel.columns.set_names(['unit_id', 'p_tag', 'units'],
+                               level=[0,1,2], inplace=True)
+        
+        fuel = fuel.apply(pd.to_numeric, errors='coerce')
+        
+        # calc fuel use for equipment that requires summation of multiple PI tag data
+        fuel[('10 VTG'  , 'CALC', 'MSCFH')] = fuel.loc[
+                :,['10 VTG_sum1','10 VTG_sum2']].sum(axis=1)
+        fuel[('20'      , 'CALC', 'MSCFH')] = fuel.loc[
+                :,['20_sum1', '20_sum2', '20_sum3', '20_sum4',]].sum(axis=1)
+        fuel[('21'      , 'CALC', 'MSCFH')] = fuel.loc[
+                :,['21_sum1', '21_sum2', '21_sum3', '21_sum4',]].sum(axis=1)
+        fuel[('70 (RFG)', 'CALC', 'MSCFH')] = fuel.loc[
+                :,['70_sum1_RFG', '70_sum2_RFG',]].sum(axis=1)
+        
+        # convert SCFH --> MSCFH where required
+        fuel[('52'     , '26FI774.PV' , 'MSCFH')] = fuel.loc[
+                :,(52, '26FI774.PV', 'SCFH')] / 1000
+        fuel[('70 (NG)', '20FI272.PV' , 'MSCFH')] = fuel.loc[
+                :,('70_NG', '20FI272.PV', 'SCFH')] / 1000
+        fuel[('71 (NG)', '20FI1913.PV', 'MSCFH')] = fuel.loc[
+                :,('71_NG', '20FI1913.PV', 'SCFH')] / 1000
+        
+        # rename columns in order to drop all with underscore ('_') character
+        fuel[('71 (RFG)', '20FI1914.PV', 'MSCFH')] = fuel.loc[
+                :,('71_RFG', '20FI1914.PV', 'MSCFH')]
+        
+        col_names_0 = list(fuel.columns.get_level_values(0).map(str))
+
+        drop_cols = []
+        for elem in col_names_0:
+            if '_' in elem:
+                drop_cols.append(elem)
+
+        fuel.drop(labels=drop_cols, axis='columns', level=0, inplace=True)
+        fuel.drop(labels=(52, '26FI774.PV', 'SCFH'), axis='columns', inplace=True)
+
+        # drop multiindex levels reduce down to single column index
+        fuel.columns = fuel.columns.droplevel(2) # in MSCFH so units unneeded
+        fuel.columns = fuel.columns.droplevel(1) # have unit IDs so PI tags unneeded
+
+        mapped_names = []
+        for s in list(fuel.columns.map(str)):
+            if s in self.unitID_equip.keys():
+                mapped_names.append(self.unitID_equip[s])
+            else:
+                mapped_names.append(s)
+
+        fuel.columns = mapped_names
+        
+        fuel = fuel.clip(lower=0)
+        
+        return fuel    
+    
+    def parse_all_monthly_CEMS(self):
+        """Combine monthly CEMS data into annual, return pd.DataFrame."""
+        """
+        df structure: (WED Pt. x Timestamp)
+        df size: <1MB for year of data
+        """
+        CEMS_paths = sorted(glob.glob(self.CEMS_dir+'*'))
+        
+        monthly_CEMS = []
+        for fpath in CEMS_paths:
+            month = self.parse_monthly_CEMS(fpath)
+            monthly_cems.append(month)
+        
+        annual_CEMS = (pd.concat(monthly_CEMS)
+                         .sort_values(['ptag', 'tstamp'])
+                         .set_index('tstamp'))
+        
+        annual_CEMS['val'] = annual_CEMS['val'].clip(lower=0)
+        return annual_CEMS
+    
+    @staticmethod
+    def parse_monthly_CEMS(path):
+        """Read one month of hourly CEMS data, return pd.DataFrame."""
+        cems_df = (pd.read_csv(path, usecols=[1,2,3])
+                     .rename(columns={
+                                'DtTm':'tstamp',
+                                'hVal_NWCAA':'val',
+                                'refNAME':'ptag'
+                                }
+                            )
+                  )
+        cems_df['tstamp'] = pd.to_datetime(cems_df['tstamp'])
+        return cems_df
     
     def generate_unitkey_unitname_dict(self):
         """Return dict of equipment keys ({unit_key: unit_name})"""
@@ -78,6 +442,14 @@ class AnnualEquipment(object):
                                  .to_dict())
         return unitkey_unitname_dict
     
+    def generate_ordered_equip_list(self):
+        """Generate list of equipment ordered by WED Pt. for CSV output."""
+        dkeys = list(self.unitID_equip.keys())
+        equip_list = []
+        for k in dkeys:
+            equip_list.append(id_dict[k])
+        return equip_list
+    
     def generate_unitID_unitkey_dict(self):
         """Return OrderedDict of equipment IDs ({unit_id: unit_key})"""
         """
@@ -87,7 +459,39 @@ class AnnualEquipment(object):
         unitID_unitkey_dict = (self.equip.set_index('unit_id')['unit_key']
                                             .to_dict(into=OrderedDict))
         return unitID_unitkey_dict
-
+    
+    def generate_ptag_pol_dict(self):
+        """Return dictionary of ({PItag : pol_units})."""
+        
+        # make dictionary of PI tags
+        ptag_pols_dict = (self.equip
+                          .dropna(axis=0, subset=['ptag'])
+                          .set_index('ptag')['param_units']
+                          .to_dict())
+        return ptag_pols_dict
+    
+    def generate_equip_ptag_dict(self):
+        """Return dictionary of equipment ({unit_key: [PItags_list]})"""
+        
+        equip_df = self.equip
+        # subset to exclude H2S and others
+        sub = (equip_df[equip_df['param'].isin(['nox', 'so2', 'co', 'o2'])]
+                                             .loc[:,['ptag','unit_key']]
+                                             .dropna(subset=['ptag'])
+                                             .set_index('unit_key'))
+        
+        dups = sub.index[sub.index.duplicated()].unique().tolist()
+        
+        equip_ptag_dict = {}
+        for k in sub.index.unique():
+            if k in dups:
+                equip_ptag_dict[k] = sub.loc[k].loc[
+                                            :,sub.loc['s_vac'].columns[0]].tolist()
+            else:
+                equip_ptag_dict[k] = sub.loc[k].tolist()
+        
+        return equip_ptag_dict
+    
     def parse_equip_map(self):
         """Read CSV of equipment information and return pd.DataFrame."""
         col_map = {
@@ -109,7 +513,7 @@ class AnnualEquipment(object):
                 # .set_index('PI Tag')
                 # .rename_axis('ptag', axis=0))
         return equip_info
-
+    
     def generate_date_range(self):
         """Generate pd.date_range to fill timestamps."""
         tsi = self.generate_ts_interval_list()
@@ -117,7 +521,7 @@ class AnnualEquipment(object):
         e_tstamp = tsi[len(tsi) - 1][1]
         dr = pd.date_range(start=s_tstamp, end=e_tstamp, freq='H')
         return dr
-
+    
     def generate_ts_interval_list(self):
         """Return list of monthly datetime tuples (start, end)."""
         intervals = []

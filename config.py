@@ -21,9 +21,11 @@ last_month_to_calculate  = 9
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
 
-equips_to_calculate = ['coker_e', 'coker_w']
+equip_to_calculate = ['coker_e', 'coker_w']
 we_are_calculating_toxics = False
 calciner_toxics = False
+calculate_PM_fractions = False
+
 
 #### configure formatting and logging ####
 # select month format for output; defaults to name abbreviations

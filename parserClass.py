@@ -20,6 +20,9 @@ class AnnualParser(object):
     
     def __init__(self, annual_equip):
         """Constructor for handling inputs, calculations, and outputs."""
+        """
+        Takes AnnualEquipment() instance as argument.
+        """
         self.annual_equip       = annual_equip
         
         # out-directory paths
@@ -28,7 +31,7 @@ class AnnualParser(object):
         # parsed from config file
         self.year_to_calc       = cf.data_year
         self.months_to_calc     = cf.months_to_calculate
-        self.equips_to_calc     = cf.equips_to_calculate
+        self.equip_to_calc      = cf.equip_to_calculate
     #    h2s_equips_to_calc     = cf.h2s_equips_to_calc
     #    EFs_to_check           = cf.EFs_to_check
         self.is_toxics          = cf.we_are_calculating_toxics
@@ -43,7 +46,8 @@ class AnnualParser(object):
         if self.is_toxics:
             self.toxics_text = ' toxics '
 
-        self.ordered_equips_to_calculate = self.equips_to_calc
+        self.ordered_equip_to_calculate = annual_equip.ordered_equip
+        
     
     def read_and_write_all(self):
         """Parse all data, calculate all emissions, write all CSVs."""
@@ -54,7 +58,7 @@ class AnnualParser(object):
     def aggregate_all_to_annual(self):
         """Return pd.DataFrame of annual emissions from listed equipment."""
         print('Calculating emissions for equipment and months specified...')
-        for equip in self.ordered_equips_to_calculate:
+        for equip in self.ordered_equip_to_calculate:
             each_equip_ser = []
             annual_coker = equipClass.AnnualCoker(self.annual_equip)
             for month in self.months_to_calc:
