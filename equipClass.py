@@ -1,4 +1,4 @@
-import time
+import time, glob
 import pandas as pd
 from collections import OrderedDict
 
@@ -30,10 +30,11 @@ class AnnualEquipment(object):
         GUID = global unique identifier
     """
     def __init__(self):
-        """Constructor for parsing annual emission-unit data."""
+        """Constructor for listing data paths."""
+#        """Constructor for parsing annual emission-unit data."""
         start_time_seconds = time.time()
         start_time = time.strftime("%H:%M:%S")
-        print('AnnualEquipment.__init__() began at '+start_time)
+        print('AnnualEquipment.__init__() began running at '+start_time)
         
         self.year           = cf.data_year
         self.months_to_calc = cf.months_to_calculate
@@ -79,8 +80,8 @@ class AnnualEquipment(object):
         self.fpath_flarefuel= self.annual_prefix+self.fname_flarefuel
         self.fpath_h2stack  = self.annual_prefix+self.fname_h2stack 
         self.fpath_flareEFs = self.annual_prefix+self.fname_flareEFs
-        self.fpath_toxics_EFs   = self.annual_prefix+self.fname_toxicsEFs
-        self.fpath_toxics_EFs_calciners = self.annual_prefix \
+        self.fpath_toxicsEFs   = self.annual_prefix+self.fname_toxicsEFs
+        self.fpath_toxicsEFs_calciners = self.annual_prefix \
                                             +self.fname_toxicsEFs_calciners
         self.fpath_EFs      = self.annual_prefix+self.fname_EFs
         
@@ -101,7 +102,7 @@ class AnnualEquipment(object):
                              # list: [Python GUIDs ordered ascending by WED Pt]
         self.unitkey_name   = self.generate_unitkey_unitname_dict()
                              # dict: {Python GUID: pretty name for output}
-        
+
         # fuel analysis, usage, and EFs
         self.RFG_annual     = ff.parse_annual_FG_lab_results(self.fpath_RFG)
                              # df: annual RFG lab-test results
@@ -121,7 +122,7 @@ class AnnualEquipment(object):
                              # df: hourly fuel data for all equipment
         self.coke_data      = self.parse_annual_coke()
                              # df: hourly coke data for all calciners
-        self.flarefuel_data = em.parse_annual_flare_fuel()
+        self.flarefuel_data = self.parse_annual_flare_fuel()
                              # df: hourly flare-gas data
         self.h2stack_data   = self.parse_annual_h2stack()
                              # df: hourly coke data for all calciners
@@ -142,7 +143,7 @@ class AnnualEquipment(object):
         
         end_time_seconds = time.time()
         end_time = time.strftime("%H:%M:%S")
-        print(__class__+'.__init__() ended at '+end_time)
+        print('AnnualEquipment.__init__() ended at '+end_time)
 
         total_time = round(end_time_seconds - start_time_seconds)
         print('Total init time: '+str(total_time)+' seconds)')
@@ -166,7 +167,7 @@ class AnnualEquipment(object):
             *dict: {equipment: {dict of EFs}}
         """
         
-        efs = pd.read_excel(self.fname_EFs, sheet_name=tab, skiprows=5,
+        efs = pd.read_excel(self.fpath_EFs, sheet_name=tab, skiprows=5,
                                             header=None, usecols='A:E')
         efs.columns = ['unit_id', 'src_name_BP', 'pollutant', 'ef', 'units']
         
@@ -203,8 +204,8 @@ class AnnualEquipment(object):
     # end temporary workaround
         
         # if PM fractions are all being set to equal PM total, then replace EFs
-        if not cf.calc_pm_fractions:
-            efs.loc[efs['pollutant'].isin(['pm25','pm10']),'ef'] = np.nan
+        if not cf.calculate_PM_fractions:
+            efs.loc[efs['pollutant'].isin(['pm25','pm10']),'ef'] = pd.np.nan
             efs.fillna(method='ffill', limit=2,axis=0, inplace=True)
         
         # pare down the EF dataframe to be accessed for conversion factors
@@ -225,7 +226,7 @@ class AnnualEquipment(object):
         """
         source (?): https://www3.epa.gov/ttn/chief/efpac/protocol/Protocol%20Report%202015.pdf
         """
-        caltox = pd.read_excel(self.fpath_toxics_EFs_calciners,
+        caltox = pd.read_excel(self.fpath_toxicsEFs_calciners,
                                 header=7, skipfooter=49, usecols=[0, 4, 6])
         caltox = caltox[1:]
         caltox.columns = ['unit_id', 'pollutant', 'ef']
@@ -256,7 +257,7 @@ class AnnualEquipment(object):
     def parse_annual_flare_EFs(self):
         """Read EFs from H2-flare gas data; return pd.DataFrame."""
         # read, clean, format, subset data
-        df = pd.read_excel(self.path_flareEFs, sheet_name='Summary',
+        df = pd.read_excel(self.fpath_flareEFs, sheet_name='Summary',
                                             skiprows=29, usecols=[0,1,2])
         
         df.columns = df.columns.str.lower()
@@ -300,7 +301,7 @@ class AnnualEquipment(object):
                         , inplace=True)
         flare_df['tstamp'] = pd.to_datetime(flare_df['tstamp'])
         flare_df.set_index('tstamp', inplace=True)
-        flare_df.replace({"[-11059] No Good Data For Calculation": np.nan}, inplace=True)
+        flare_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan}, inplace=True)
         flare_df['flare_header_flow'] = flare_df['flare_header_flow'].clip(lower=0)
         flare_df['discharge_to_flare'] = flare_df['discharge_to_flare'].clip(lower=0)
         return flare_df
@@ -407,7 +408,7 @@ class AnnualEquipment(object):
         monthly_CEMS = []
         for fpath in CEMS_paths:
             month = self.parse_monthly_CEMS(fpath)
-            monthly_cems.append(month)
+            monthly_CEMS.append(month)
         
         annual_CEMS = (pd.concat(monthly_CEMS)
                          .sort_values(['ptag', 'tstamp'])
@@ -534,7 +535,6 @@ class AnnualEquipment(object):
 
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data."""
-    
     def __init__(self, annual_equip):
         """Constructor for parsing annual coker data."""
         self.annual_equip = annual_equip
