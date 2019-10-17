@@ -1,0 +1,5 @@
+PI Tag,Python GUID,WED Pt,Unit Name,CEMS,Range,Units,1-day,5-day
+12AI8060A.PV,coker_e,40_E,Coker E Charge Heater,Dry O2,NULL,%,NULL,NULL
+12AI8060E.PV,coker_e,40_E,Coker E Charge Heater,CO2,NULL,%,NULL,NULL
+12AI7060A.PV,coker_w,41_W,Coker W Charge Heater,Dry O2,NULL,%,NULL,NULL
+12AI7060E.PV,coker_w,41_W,Coker W Charge Heater,CO2,NULL,%,NULL,NULL
