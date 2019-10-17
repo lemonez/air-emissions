@@ -61,7 +61,7 @@ class AnnualEquipment(object):
         self.fname_h2stack  = str(self.year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
         self.fname_flareEFs = str(self.year)+'_EFs_flare.xlsx'      # EFs for H2 flare
         self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
-        self.fname_toxicsEFs_calciners = str(year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
+        self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
         self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
         
         # paths
@@ -142,7 +142,7 @@ class AnnualEquipment(object):
         
         end_time_seconds = time.time()
         end_time = time.strftime("%H:%M:%S")
-        print(__class__'.__init__() ended at '+end_time)
+        print(__class__+'.__init__() ended at '+end_time)
 
         total_time = round(end_time_seconds - start_time_seconds)
         print('Total init time: '+str(total_time)+' seconds)')
@@ -447,7 +447,7 @@ class AnnualEquipment(object):
         dkeys = list(self.unitID_equip.keys())
         equip_list = []
         for k in dkeys:
-            equip_list.append(id_dict[k])
+            equip_list.append(self.unitID_equip[k])
         return equip_list
     
     def generate_unitID_unitkey_dict(self):
