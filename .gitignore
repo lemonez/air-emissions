@@ -14,4 +14,4 @@ junk.py
 *pycache*
 *.csh
 deepreloader.py
-equipmap.csv
+!data/static/equipmap.csv
