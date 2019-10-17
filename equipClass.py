@@ -31,7 +31,7 @@ class AnnualEquipment(object):
     """
     def __init__(self):
         """Constructor for listing data paths and emissions unit information."""
-#        """Constructor for parsing annual emission-unit data."""
+        # temporal data constraints
         self.year           = cf.data_year
         self.months_to_calc = cf.months_to_calculate
         self.month_offset   = cf.month_offset
@@ -89,9 +89,7 @@ class AnnualEquipment(object):
                                             +self.fname_toxicsEFs_calciners
         self.fpath_EFs      = self.annual_prefix+self.fname_EFs
         
-        # consts, dicts, dfs (indented descriptions follow variable assignments)
-        
-        # equipment mapping
+        # equipment mapping (indented descriptions follow assignments)
         self.equip          = self.parse_equip_map()
                              # df: all equipment/PItag data
         self.equip_ptags    = self.generate_equip_ptag_dict()
@@ -111,7 +109,9 @@ class AnnualEquipment(object):
         start_time = time.strftime("%H:%M:%S")
         print('annual data parsing began at '+start_time)
 
-        # fuel analysis, usage, and EFs
+        # CEMS, fuel analysis and usage, EFs (indented descriptions follow assignments)
+        self.CEMS_annual    = self.parse_all_monthly_CEMS()
+                             # df: annual CEMS data
         self.RFG_annual     = ff.parse_annual_FG_lab_results(self.fpath_RFG)
                              # df: annual RFG lab-test results
         self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_NG)
@@ -124,22 +124,19 @@ class AnnualEquipment(object):
                              # df: annual flare-gas lab-test results
         self.CVTG_annual    = ff.parse_annual_FG_lab_results(self.fpath_CVTG)
                              # df: annual CVTG lab-test results
-   # cems commented out to reduce init time                          
-   #    self.CEMS_annual    = self.parse_all_monthly_CEMS()
-                             # df: annual CEMS data
         self.fuel_data      = self.parse_annual_fuel()
                              # df: hourly fuel data for all equipment
-        self.coke_data      = self.parse_annual_coke()
-                             # df: hourly coke data for all calciners
         self.flarefuel_data = self.parse_annual_flare_fuel()
                              # df: hourly flare-gas data
+        self.coke_data      = self.parse_annual_coke()
+                             # df: hourly coke data for all calciners
         self.h2stack_data   = self.parse_annual_h2stack()
                              # df: hourly coke data for all calciners
         self.flareEFs       = self.parse_annual_flare_EFs()
                              # df: EFs for flare gas
         self.toxicsEFs      = self.parse_annual_toxics_EFs()
                              # df: EFs for toxics
-        self.toxicsEFs_calciners = self.parse_calciner_toxics_EFs()
+        self.toxicsEFs_calciners = self.parse_annual_calciner_toxics_EFs()
                              # df: EFs for calciner toxics
         self.EFs            = self.parse_annual_EFs()
                              # dict: {integer month: (EFs df, EFunits df, equip_EF_dict)}
@@ -223,7 +220,7 @@ class AnnualEquipment(object):
         
         return efs, pollutant_units, equip_EF_dict
     
-    def parse_calciner_toxics_EFs(self):
+    def parse_annual_calciner_toxics_EFs(self):
         """Parse calciner EF data, return pd.DataFrame."""
         """
         source (?): https://www3.epa.gov/ttn/chief/efpac/protocol/Protocol%20Report%202015.pdf
@@ -291,22 +288,6 @@ class AnnualEquipment(object):
         stack = stack.clip(lower=0)
         return stack
     
-    def parse_annual_flare_fuel(self):
-        """Read annual fuel flow data for H2-plant flare, return pd.DataFrame."""
-        flare_df = pd.read_excel(self.fpath_flarefuel, skiprows=4)
-        
-        flare_df.rename(columns={'1 h':'tstamp',
-                                 '46FI202.PV':'flare_header_flow',
-                                 '46FI231.PV':'discharge_to_flare',
-                                 '46PC60.OP':'valve'}
-                        , inplace=True)
-        flare_df['tstamp'] = pd.to_datetime(flare_df['tstamp'])
-        flare_df.set_index('tstamp', inplace=True)
-        flare_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan}, inplace=True)
-        flare_df['flare_header_flow'] = flare_df['flare_header_flow'].clip(lower=0)
-        flare_df['discharge_to_flare'] = flare_df['discharge_to_flare'].clip(lower=0)
-        return flare_df
-    
     def parse_annual_coke(self):
         """Read annual coke data for calciners, return pd.DataFrame."""
         coke_df = pd.read_excel(self.fpath_coke, skiprows=[0,1], header=[0,1])
@@ -322,6 +303,22 @@ class AnnualEquipment(object):
         
         coke_df = coke_df.clip(lower=0)
         return coke_df    
+    
+    def parse_annual_flare_fuel(self):
+        """Read annual fuel flow data for H2-plant flare, return pd.DataFrame."""
+        flare_df = pd.read_excel(self.fpath_flarefuel, skiprows=4)
+        
+        flare_df.rename(columns={'1 h':'tstamp',
+                                 '46FI202.PV':'flare_header_flow',
+                                 '46FI231.PV':'discharge_to_flare',
+                                 '46PC60.OP':'valve'}
+                        , inplace=True)
+        flare_df['tstamp'] = pd.to_datetime(flare_df['tstamp'])
+        flare_df.set_index('tstamp', inplace=True)
+        flare_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan}, inplace=True)
+        flare_df['flare_header_flow'] = flare_df['flare_header_flow'].clip(lower=0)
+        flare_df['discharge_to_flare'] = flare_df['discharge_to_flare'].clip(lower=0)
+        return flare_df
     
     def parse_annual_fuel(self):
         """Read annual fuel data for all equipment, return pd.DataFrame."""
