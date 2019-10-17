@@ -30,16 +30,20 @@ class AnnualEquipment(object):
         GUID = global unique identifier
     """
     def __init__(self):
-        """Constructor for listing data paths."""
+        """Constructor for listing data paths and emissions unit information."""
 #        """Constructor for parsing annual emission-unit data."""
-        start_time_seconds = time.time()
-        start_time = time.strftime("%H:%M:%S")
-        print('AnnualEquipment.__init__() began running at '+start_time)
-        
         self.year           = cf.data_year
         self.months_to_calc = cf.months_to_calculate
         self.month_offset   = cf.month_offset
+        self.ts_intervals   = self.generate_ts_interval_list()
+                             # list of tuples: [monthly intervals (start, end)]
         
+        # formatting
+        self.col_name_order = ['equipment', 'month', 'fuel_rfg', 'fuel_ng',
+                               'nox', 'co', 'so2', 'voc',
+                               'pm', 'pm25', 'pm10', 'h2so4']
+                             # list: col order for emissions summaries
+
         # directories
         self.data_prefix    = cf.data_dir               # all input data files
         self.annual_prefix  = self.data_prefix+'annual/'# data that changes monthly/annually
@@ -64,7 +68,7 @@ class AnnualEquipment(object):
         self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
         self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
         self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
-        
+
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
         self.fpath_FG_chem  = self.static_prefix+self.fname_FG_chem
@@ -80,14 +84,12 @@ class AnnualEquipment(object):
         self.fpath_flarefuel= self.annual_prefix+self.fname_flarefuel
         self.fpath_h2stack  = self.annual_prefix+self.fname_h2stack 
         self.fpath_flareEFs = self.annual_prefix+self.fname_flareEFs
-        self.fpath_toxicsEFs   = self.annual_prefix+self.fname_toxicsEFs
+        self.fpath_toxicsEFs= self.annual_prefix+self.fname_toxicsEFs
         self.fpath_toxicsEFs_calciners = self.annual_prefix \
                                             +self.fname_toxicsEFs_calciners
         self.fpath_EFs      = self.annual_prefix+self.fname_EFs
         
         # consts, dicts, dfs (indented descriptions follow variable assignments)
-        self.ts_intervals   = self.generate_ts_interval_list()
-                             # list of tuples: [monthly intervals (start, end)]
         
         # equipment mapping
         self.equip          = self.parse_equip_map()
@@ -103,6 +105,12 @@ class AnnualEquipment(object):
         self.unitkey_name   = self.generate_unitkey_unitname_dict()
                              # dict: {Python GUID: pretty name for output}
 
+    def parse_annual_facility_data(self):
+        """Parse facility-wide annual data."""
+        start_time_seconds = time.time()
+        start_time = time.strftime("%H:%M:%S")
+        print('annual data parsing began at '+start_time)
+
         # fuel analysis, usage, and EFs
         self.RFG_annual     = ff.parse_annual_FG_lab_results(self.fpath_RFG)
                              # df: annual RFG lab-test results
@@ -116,7 +124,8 @@ class AnnualEquipment(object):
                              # df: annual flare-gas lab-test results
         self.CVTG_annual    = ff.parse_annual_FG_lab_results(self.fpath_CVTG)
                              # df: annual CVTG lab-test results
-        self.CEMS_annual    = self.parse_all_monthly_CEMS()
+   # cems commented out to reduce init time                          
+   #    self.CEMS_annual    = self.parse_all_monthly_CEMS()
                              # df: annual CEMS data
         self.fuel_data      = self.parse_annual_fuel()
                              # df: hourly fuel data for all equipment
@@ -134,17 +143,10 @@ class AnnualEquipment(object):
                              # df: EFs for calciner toxics
         self.EFs            = self.parse_annual_EFs()
                              # dict: {integer month: (EFs df, EFunits df, equip_EF_dict)}
-
-        # formatting
-        self.col_name_order = ['equipment', 'month', 'fuel_rfg', 'fuel_ng',
-                               'nox', 'co', 'so2', 'voc',
-                               'pm', 'pm25', 'pm10', 'h2so4']
-                             # list: col order for emissions summaries
         
         end_time_seconds = time.time()
         end_time = time.strftime("%H:%M:%S")
-        print('AnnualEquipment.__init__() ended at '+end_time)
-
+        print('annual data parsing began at '+end_time)
         total_time = round(end_time_seconds - start_time_seconds)
         print('Total init time: '+str(total_time)+' seconds)')
     
@@ -259,10 +261,8 @@ class AnnualEquipment(object):
         # read, clean, format, subset data
         df = pd.read_excel(self.fpath_flareEFs, sheet_name='Summary',
                                             skiprows=29, usecols=[0,1,2])
-        
         df.columns = df.columns.str.lower()
         df.rename(columns={'value':'ef'}, inplace=True)
-        
         df['pollutant'] = df['pollutant'].str.strip().str.lower()
         df['units'] = df['units'].str.strip().str.lower()
         df.loc[:,'flare_on'] = 'unassigned'
@@ -275,6 +275,7 @@ class AnnualEquipment(object):
         
         # combine cleaned-up DataFrames and cast as numeric
         flare_EFs = pd.concat([flare_off_EFs, flare_on_EFs])
+        # the following returns SettingWithCopyWarning; can't figure out how to fix
         flare_EFs.loc[:,'ef'] = pd.to_numeric(flare_EFs.loc[:,'ef'])
         return flare_EFs
     
