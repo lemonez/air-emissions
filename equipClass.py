@@ -384,8 +384,8 @@ class AnnualEquipment(object):
         
         mapped_names = []
         for s in list(fuel.columns.map(str)):
-            if s in ae.unitID_equip.keys():
-                mapped_names.append(ae.unitID_equip[s])
+            if s in self.unitID_equip.keys():
+                mapped_names.append(self.unitID_equip[s])
             else:
                 mapped_names.append(s)
         
