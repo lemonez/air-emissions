@@ -96,7 +96,6 @@ def parse_annual_FG_lab_results(path, sheet):
     cokerFG, CVTG, and H2 flare. Data is averaged on a monthly basis.
 	"""
     data = pd.read_excel(path, sheet_name=sheet, skiprows=4, header=[0,1], index_col=0)
-    return data
     # replace missing symbols with NaN
     data.replace(['****', '--'], pd.np.nan, inplace=True)
     
