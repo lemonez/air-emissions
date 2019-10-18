@@ -85,25 +85,24 @@ NG_compounds = {
         }
         
 def read_chem_constants(path):
-    """Read chemistry constants/parameters into DataFrame."""
-    
+    """Read chemistry constants/parameters, return pd.DataFrame."""
     data = pd.read_csv(path)
-    
     return data
 
-def parse_annual_FG_lab_results(path):
-    """Read fuel-gas lab-test results and return pd.DataFrame."""
+def parse_annual_FG_lab_results(path, sheet):
+    """Read fuel-gas lab-test results, return pd.DataFrame."""
     """
     Fuel analysis tests completed several times monthly for RFG,
     cokerFG, CVTG, and H2 flare. Data is averaged on a monthly basis.
 	"""
-    data = pd.read_excel(path, skiprows=3, header=[0,1], index_col=0)
-    
+    data = pd.read_excel(path, sheet_name=sheet, skiprows=4, header=[0,1], index_col=0)
+    return data
     # replace missing symbols with NaN
     data.replace(['****', '--'], pd.np.nan, inplace=True)
     
     # combine data and time MultiIndex rows to create one DatetimeIndex
-            # data.columns = data.columns.droplevel(1) # if we wanted to ignore the time
+            # if we wanted to drop the time label...but might be good to leave so that columns are unique
+            # data.columns = data.columns.droplevel(1)
     # get date component; format as date string
     d_idx = data.columns.get_level_values(0).strftime('%Y-%m-%d')
     
@@ -127,13 +126,13 @@ def parse_annual_FG_lab_results(path):
 #    data.loc['Oxygen', :] = 0
     return data
 
-def parse_annual_NG_lab_results(path):
+def parse_annual_NG_lab_results(path, sheet):
     """Read natural-gas lab-test results and return pd.DataFrame."""
     """
     Fuel analysis tests completed several times monthly. Data is
     averaged on a monthly basis.
 	"""
-    data = pd.read_excel(path, skiprows=8)[:12]
+    data = pd.read_excel(path, sheet_name=sheet, skiprows=8)[:12]
     data['Sample Date'] = pd.to_datetime(data['Sample Date'])
     
     data = data.T.rename(columns=data.T.iloc[0],
@@ -146,8 +145,33 @@ def parse_annual_NG_lab_results(path):
            + [data.index[1], data.index[0]]))
     return data
 
+def parse_annual_flare_lab_results(path, sheet):
+    """Read fuel-gas lab-test results, return pd.DataFrame."""
+    """
+    Fuel analysis tests completed daily for H2 flare gas.
+	"""
+    data = pd.read_excel(path, sheet_name=sheet, skiprows=4, header=[0,1], index_col=0)
+    # replace missing symbols with NaN
+    data.replace(['****', '--'], pd.np.nan, inplace=True)
+    # get date component; format as date string
+    d_idx = data.columns.get_level_values(0).strftime('%Y-%m-%d')
+    # get datetime.time component as string
+    t = data.columns.get_level_values(1).astype(str)
+    # convert to datetime, format as time string
+    t_idx = pd.to_datetime(t).strftime('%H:%M:%S')
+    # concatenate zipped lists elementwise to create datetime stamps
+    dt_idx = pd.to_datetime(['{} {}'.format(date_, time_) 
+                             for date_, time_
+                             in zip(d_idx,t_idx)])
+    # reassign and rename columns and indices
+    data.columns = dt_idx
+    data.columns.name = 'test_date'
+    data.index.name = 'compound'
+    data.rename(index=FG_compounds, inplace=True)
+    return data
+
 def get_monthly_lab_results(annual_gas_test_df, ts_interval):
-    """Return pd.DataFrame with gas lab-test results for month."""
+    """Return pd.DataFrame with gas lab-test results for specified month."""
     start = ts_interval[0]
     end   = ts_interval[1]
     cols = annual_gas_test_df.columns
@@ -157,13 +181,13 @@ def get_monthly_lab_results(annual_gas_test_df, ts_interval):
     return sub
 
 def calculate_monthly_HHV(monthly_gas_test_results_df):
-    """Calculate average higher heating value (HHV, gbtu/cf) for month."""
+    """Calculate average higher heating value (HHV, gbtu/cf) for specified month."""
     HHV = monthly_gas_test_results_df.loc['GBTU/CF'].mean()
     return HHV
     
 def calculate_monthly_f_factor(gas_test_results_df, gas_chem_path,
                                 ts_interval, ff_terms=ff_constants):
-    """Calculate refinery fuel gas Fd-factor."""
+    """Calculate refinery fuel gas Fd-factor for specified month."""
     """
     Uses chemistry constants and gas lab-analysis data, adhering to:
     "EPA Test Method 19 - 40 CFR Appendix A-7 to Part 60 -
