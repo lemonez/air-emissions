@@ -112,7 +112,7 @@ class AnnualEquipment(object):
         print('annual data parsing began at '+start_time)
 
         # CEMS, fuel analysis and usage, EFs (indented descriptions follow assignments)
-        self.CEMS_annual    = self.parse_all_monthly_CEMS()
+#save time        self.CEMS_annual    = self.parse_all_monthly_CEMS()
                              # df: annual CEMS data
         self.RFG_annual     = ff.parse_annual_FG_lab_results(self.fpath_RFG)
                              # df: annual RFG lab-test results
@@ -127,7 +127,7 @@ class AnnualEquipment(object):
         self.CVTG_annual    = ff.parse_annual_FG_lab_results(self.fpath_CVTG)
                              # df: annual CVTG lab-test results
 #change "_data" --> "_annual" for these annual parsing funcs
-        self.fuel_annual      = self.parse_annual_fuel()
+#refactoring        self.fuel_annual      = self.parse_annual_fuel()
                              # df: hourly fuel data for all equipment
         self.flarefuel_annual = self.parse_annual_flare_fuel()
                              # df: hourly flare-gas data
@@ -146,7 +146,7 @@ class AnnualEquipment(object):
         
         end_time_seconds = time.time()
         end_time = time.strftime("%H:%M:%S")
-        print('annual data parsing began at '+end_time)
+        print('annual data parsing ended at '+end_time)
         total_time = round(end_time_seconds - start_time_seconds)
         print('Total init time: '+str(total_time)+' seconds)')
     
@@ -329,27 +329,24 @@ class AnnualEquipment(object):
         df structure: (WED Pt. x Timestamp)
         df size: <2MB storage for year of data
         """
-        
         fuel = pd.read_excel(self.fpath_fuel, skiprows=9, header=list(range(6)))
-        
         fuel.columns = fuel.columns.droplevel(5)
         fuel.columns = fuel.columns.droplevel(4)
         fuel.columns = fuel.columns.droplevel(1)
-        
         fuel.set_index(fuel.columns.tolist()[0], inplace=True)
         fuel.index.name = 'tstamp'
         
         # subset out columns of interest,
         # because (usecols='A:AC, AF:AL, AP:AR') gives ValueError
-        fuel = pd.concat(
-                    [fuel.iloc[:,0:28], fuel.iloc[:,30:38], fuel.iloc[:,40:43]],
-                    axis=1)
+        fuel = pd.concat([fuel.iloc[:,0:30],
+                          fuel.iloc[:,32:40],
+                          fuel.iloc[:,42:45]], axis=1)
         fuel.columns.set_names(['unit_id', 'p_tag', 'units'],
                                level=[0,1,2], inplace=True)
         
         fuel = fuel.apply(pd.to_numeric, errors='coerce')
         
-        # calc fuel use for equipment that requires summation of multiple PI tag data
+        # calc fuel use for equipment that require summing multiple PI tags
         fuel[('10 VTG'  , 'CALC', 'MSCFH')] = fuel.loc[
                 :,['10 VTG_sum1','10 VTG_sum2']].sum(axis=1)
         fuel[('20'      , 'CALC', 'MSCFH')] = fuel.loc[
@@ -361,9 +358,9 @@ class AnnualEquipment(object):
         
         # convert SCFH --> MSCFH where required
         fuel[('52'     , '26FI774.PV' , 'MSCFH')] = fuel.loc[
-                :,(52, '26FI774.PV', 'SCFH')] / 1000
+                :,(52,      '26FI774.PV',  'SCFH')] / 1000
         fuel[('70 (NG)', '20FI272.PV' , 'MSCFH')] = fuel.loc[
-                :,('70_NG', '20FI272.PV', 'SCFH')] / 1000
+                :,('70_NG', '20FI272.PV',  'SCFH')] / 1000
         fuel[('71 (NG)', '20FI1913.PV', 'MSCFH')] = fuel.loc[
                 :,('71_NG', '20FI1913.PV', 'SCFH')] / 1000
         
@@ -372,31 +369,30 @@ class AnnualEquipment(object):
                 :,('71_RFG', '20FI1914.PV', 'MSCFH')]
         
         col_names_0 = list(fuel.columns.get_level_values(0).map(str))
-
+        
         drop_cols = []
         for elem in col_names_0:
             if '_' in elem:
                 drop_cols.append(elem)
-
+        
         fuel.drop(labels=drop_cols, axis='columns', level=0, inplace=True)
         fuel.drop(labels=(52, '26FI774.PV', 'SCFH'), axis='columns', inplace=True)
-
+        
         # drop multiindex levels reduce down to single column index
         fuel.columns = fuel.columns.droplevel(2) # in MSCFH so units unneeded
         fuel.columns = fuel.columns.droplevel(1) # have unit IDs so PI tags unneeded
-
+        
         mapped_names = []
         for s in list(fuel.columns.map(str)):
-            if s in self.unitID_equip.keys():
-                mapped_names.append(self.unitID_equip[s])
+            if s in ae.unitID_equip.keys():
+                mapped_names.append(ae.unitID_equip[s])
             else:
                 mapped_names.append(s)
-
+        
         fuel.columns = mapped_names
         
         fuel = fuel.clip(lower=0)
-        
-        return fuel    
+        return fuel
     
     def parse_all_monthly_CEMS(self):
         """Combine monthly CEMS data into annual, return pd.DataFrame."""
