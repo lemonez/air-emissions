@@ -102,6 +102,8 @@ class AnnualEquipment(object):
                              # list: [Python GUIDs ordered ascending by WED Pt]
         self.unitkey_name   = self.generate_unitkey_unitname_dict()
                              # dict: {Python GUID: pretty name for output}
+                             
+        self.parse_annual_facility_data()
 
     def parse_annual_facility_data(self):
         """Parse facility-wide annual data."""
@@ -124,9 +126,10 @@ class AnnualEquipment(object):
                              # df: annual flare-gas lab-test results
         self.CVTG_annual    = ff.parse_annual_FG_lab_results(self.fpath_CVTG)
                              # df: annual CVTG lab-test results
-        self.fuel_data      = self.parse_annual_fuel()
+#change "_data" --> "_annual" for these annual parsing funcs
+        self.fuel_annual      = self.parse_annual_fuel()
                              # df: hourly fuel data for all equipment
-        self.flarefuel_data = self.parse_annual_flare_fuel()
+        self.flarefuel_annual = self.parse_annual_flare_fuel()
                              # df: hourly flare-gas data
         self.coke_data      = self.parse_annual_coke()
                              # df: hourly coke data for all calciners
@@ -626,13 +629,13 @@ class MonthlyCoker(AnnualCoker):
     def __init__(self,
                  unit_key,
                  month,
-                 annual_coker):
+                 annual_eu):
         """Constructor for individual coker emission unit calculations."""
 #        super().__init__()
         self.month          = month
-        self.unit_key       = unit_key        
-        self.annual_coker   = annual_coker
-        self.annual_equip   = annual_coker.annual_equip
+        self.unit_key       = unit_key
+        self.annual_eu      = annual_eu # aka AnnualCoker()
+        self.annual_equip   = annual_eu.annual_equip # aka AnnualEquipment()
         
         # instance attributes calculated at month level
         self.ts_interval    = self.annual_equip.ts_intervals[self.month
