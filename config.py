@@ -8,8 +8,8 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
-data_year     = 2018  # year_to_calculate = int(time.strftime('%Y'))
-data_dir      = './DummyData/'
+data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
+data_dir      = './data/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
