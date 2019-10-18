@@ -1,5 +1,75 @@
 PI Tag,Python GUID,WED Pt,Unit Name,CEMS,Range,Units,1-day,5-day
-12AI8060A.PV,coker_e,40_E,Coker E Charge Heater,Dry O2,NULL,%,NULL,NULL
-12AI8060E.PV,coker_e,40_E,Coker E Charge Heater,CO2,NULL,%,NULL,NULL
-12AI7060A.PV,coker_w,41_W,Coker W Charge Heater,Dry O2,NULL,%,NULL,NULL
-12AI7060E.PV,coker_w,41_W,Coker W Charge Heater,CO2,NULL,%,NULL,NULL
+10AI136A.PV,crude_vtg,10 VTG,Crude Heater - VTG,H2S,0-300,ppm,30,15
+30AI568A.PV,crude_rfg,10 RFG,Crude Heater - RFG,H2S,0-300,ppm,20,15
+10AI659.PV,n_vac,11,North Vacuum Heater,O2,0-25,%,2,1
+10AI659B.PV,n_vac,11,North Vacuum Heater,NOX,0-120,ppm,2,1
+10AI676.PV,s_vac,12,South Vacuum Heater,O2,0-25,%,2,1
+10AI685.PV,s_vac,12,South Vacuum Heater,NOX,0-100,ppm,10,5
+NULL,ref_heater_1,20,Reformer Heater Reaction 1 #1,NULL,NULL,NULL,NULL,NULL
+21AI165.PV,ref_heater_2,21,Reformer Heater Reaction 1 #2,O2,0-25,%,2,1
+NULL,naptha_heater,22,Naptha HDS Charge Heater,NULL,NULL,NULL,NULL,NULL
+NULL,naptha_reboiler,23,Naptha HDS Stripper Reboiler,NULL,NULL,NULL,NULL,NULL
+NULL,dhds_heater_3,27,Diesel HDS Charge Heater #3,NULL,NULL,NULL,NULL,NULL
+15AI2865A.PV,hcr_1,30,HC 1st Stage Fract Reboiler,O2,0-25,%,2,1
+15AI2865B.PV,hcr_1,30,HC 1st Stage Fract Reboiler,NOX,0-100,ppm,10,5
+NULL,hcr_2,31,HC 2nd Stage Fract Reboiler,NULL,NULL,NULL,NULL,NULL
+15AI598.PV,rxn_r_1,32,R-1 Reaction Heater,O2,0-25,%,2,1
+15AI596.PV,rxn_r_1,32,R-1 Reaction Heater,NOX,0-100,ppm,10,5
+NULL,rxn_r_4,33,R-4 Reaction Heater,NULL,NULL,NULL,NULL,NULL
+12AI55A.PV,coker_1,40,Coker N Charge Heater #1,H2S,0-300,ppm,30,15
+NULL,coker_2,41,Coker S Charge Heater #2,NULL,NULL,NULL,NULL,NULL
+12AI8060A.PV,coker_e,40 E,Coker E Charge Heater,Dry O2,0-300,%,NULL,NULL
+12AI8060B.PV,coker_e,40 E,Coker E Charge Heater,NOX,0-300,ppm,NULL,NULL
+12AI8060C.PV,coker_e,40 E,Coker E Charge Heater,CO,0-300,ppm,NULL,NULL
+12AI8060D.PV,coker_e,40 E,Coker E Charge Heater,Lo SO2,0-300,ppm,NULL,NULL
+12AI8060E.PV,coker_e,40 E,Coker E Charge Heater,CO2,NULL,%,NULL,NULL
+12AI8060F.PV,coker_e,40 E,Coker E Charge Heater,NO,0-300,ppm,NULL,NULL
+12AI8060G.PV,coker_e,40 E,Coker E Charge Heater,Hi SO2,0-300,ppm,NULL,NULL
+12AI7060A.PV,coker_w,41 W,Coker W Charge Heater,Dry O2,NULL,%,NULL,NULL
+12AI7060B.PV,coker_w,41 W,Coker W Charge Heater,NOX,0-300,ppm,NULL,NULL
+12AI7060C.PV,coker_w,41 W,Coker W Charge Heater,CO,0-300,ppm,NULL,NULL
+12AI7060D.PV,coker_w,41 W,Coker W Charge Heater,Lo SO2,0-300,ppm,NULL,NULL
+12AI7060E.PV,coker_w,41 W,Coker W Charge Heater,CO2,NULL,%,NULL,NULL
+12AI7060F.PV,coker_w,41 W,Coker W Charge Heater,NO,0-300,ppm,NULL,NULL
+12AI7060G.PV,coker_w,41 W,Coker W Charge Heater,Hi SO2,0-300,ppm,NULL,NULL
+46AI601.PV,h2_plant_2,46,H2 Plant #2,Dry O2,0-25,%,2,1
+46AI60_.PV,h2_plant_2,46,H2 Plant #2,Wet O2,0-25,%,2,1
+46AI602.PV,h2_plant_2,46,H2 Plant #2,NOX,0-100,ppm,10,5
+46AI137.PV,h2_plant_2,46,H2 Plant #2,SCR NOX,0-200,ppm,20,10
+46AI604.PV,h2_plant_2,46,H2 Plant #2,SO2,0-50,ppm,5,2.5
+46AI603.PV,h2_plant_2,46,H2 Plant #2,CO,0-500,ppm,50,25
+46AI599.PV,h2_plant_2,46,H2 Plant #2,CO2,0-25,%,2,1
+13AI387A.PV,dhds_heater_1,50,Diesel HDS Charge Heater #1,O2,0-25,%,2,1
+13AI387B.PV,dhds_heater_1,50,Diesel HDS Charge Heater #1,NOX,0-100,ppm,10,5
+13AI881A.PV,dhds_reboiler_1,51,Diesel HDS Stabilizer Reboiler #1,O2,0-25,%,2,1
+13AI881B.PV,dhds_reboiler_1,51,Diesel HDS Stabilizer Reboiler #1,NOX,0-100,ppm,10,5
+NULL,dhds_heater_2,52,Diesel HDS Charge Heater #2,NULL,NULL,NULL,NULL,NULL
+NULL,h_furnace_n,60,H2 N Furnace,NULL,NULL,NULL,NULL,NULL
+NULL,h_furnace_s,61,H2 S Furnace,NULL,NULL,NULL,NULL,NULL
+20AI204.PV,calciner_1,70,Calciner Hearths #1&2,O2,0-25,%,2,1
+20AI204B.PV,calciner_1,70,Calciner Hearths #1&2,NOX,0-1000,ppm,100,50
+20AI205.PV,calciner_1,70,Calciner Hearths #1&2,SO2,0-200,ppm,20,10
+20AI1362.PV,calciner_1,70,Calciner Hearths #1&2,CO2,0-25,%,2.5,1.25
+20AI2606.PV,calciner_2,71,Calciner Hearth #3,O2,0-25,%,2,1
+20AI210.PV,calciner_2,71,Calciner Hearth #3,NOX,0-250,ppm,25,12.5
+20AI2607.PV,calciner_2,71,Calciner Hearth #3,SO2,0-200,ppm,20,10
+20AI3212.PV,calciner_2,71,Calciner Hearth #3,CO2,0-25,%,2,1
+NULL,iht_heater,80,IHT Heater,NULL,NULL,NULL,NULL,NULL
+30AI954A.PV,boiler_4,104,Boiler #4,O2,0-25,%,2,1
+30AI954B.PV,boiler_4,104,Boiler #4,NOX,0-250,ppm,25,12.5
+30AI735B.PV,boiler_5,105,Boiler #5,O2,0-25,%,2,1
+30AI735C.PV,boiler_5,105,Boiler #5,NOX,0-100,ppm,10,5
+30AI735A.PV,boiler_5,105,Boiler #5,CO,0-500,ppm,50,25
+30AI2255.PV,boiler_6,106,Boiler #6,O2,0-25,%,2,1
+30AI2253.PV,boiler_6,106,Boiler #6,NOX,0-100,ppm,10,5
+30AI2252.PV,boiler_6,106,Boiler #6,SCR NOX,0-200,ppm,20,10
+30AI2254.PV,boiler_6,106,Boiler #6,CO,0-500,ppm,50,25
+30AI2355.PV,boiler_7,107,Boiler #7,O2,0-25,%,2,1
+30AI2353.PV,boiler_7,107,Boiler #7,NOX,0-100,ppm,10,5
+30AI2352.PV,boiler_7,107,Boiler #7,SCR NOX,0-200,ppm,20,10
+30AI2354.PV,boiler_7,107,Boiler #7,CO,0-500,ppm,50,25
+NULL,h2_flare,112,H2 Flare,NULL,NULL,NULL,NULL,NULL
+17AI2131.PV,incin,120,Incinerator,O2,0-25,%,2,1
+17AI2130.PV,incin,120,Incinerator,SO2,0-500,ppm,50,25
+25AI102.PV,tgu_2,121,TGU #2,O2,0-25,%,2,1
+25AI100.PV,tgu_2,121,TGU #2,SO2,0-500,ppm,50,25
