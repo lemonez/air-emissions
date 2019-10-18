@@ -26,7 +26,28 @@ ff_constants = {
                              #   potentially be substituted if not at standard conditions)
         }
 
-# map chemical compounds to raw strings from cems output                
+# map chemical compounds to raw strings from CEMS output
+
+NG_compounds = {
+        'Carbon dioxide- mol%'   : 'Carbon dioxide'   ,
+        'Nitrogen- mol%'         : 'Nitrogen'         ,
+        'Methane- mol%'          : 'Methane'          ,
+        'Ethane- mol%'           : 'Ethane'           ,
+        'Propane- mol%'          : 'Propane'          ,
+        'Isobutane- mol%'        : 'Isobutane'        ,
+        'n-Butane- mol%'         : 'n-Butane'         ,
+        'Isopentane- mol%'       : 'Isopentane'       ,
+        'n-Pentane- mol%'        : 'n-Pentane'        ,
+        'C6 -  mol%'             : 'C6'               ,
+        'C7- mol%'               : 'C7'               ,
+        'C8- mol%'               : 'C8'               ,
+        'C9- mol%'               : 'C9'               ,
+        'C10- mol%'              : 'C10'              ,
+        'C10+ - mol%'            : 'C10+'             ,
+        'Hydrogen sulfide- mol%' : 'Hydrogen sulfide' ,
+        'H2O lb'                 : 'H2O'               # remember this is in lbs
+        }
+          
 FG_compounds = {          
         'Hydrogen- mol%'          : 'Hydrogen'          ,
         'Carbon dioxide- mol%'    : 'Carbon dioxide'    ,
@@ -64,29 +85,28 @@ FG_compounds = {
         'Hexanes Plus- mol%'      : 'Hexanes Plus'
         }
 
-NG_compounds = {
-        'Carbon dioxide- mol%'   : 'Carbon dioxide'   ,
-        'Nitrogen- mol%'         : 'Nitrogen'         ,
-        'Methane- mol%'          : 'Methane'          ,
-        'Ethane- mol%'           : 'Ethane'           ,
-        'Propane- mol%'          : 'Propane'          ,
-        'Isobutane- mol%'        : 'Isobutane'        ,
-        'n-Butane- mol%'         : 'n-Butane'         ,
-        'Isopentane- mol%'       : 'Isopentane'       ,
-        'n-Pentane- mol%'        : 'n-Pentane'        ,
-        'C6 -  mol%'             : 'C6'               ,
-        'C7- mol%'               : 'C7'               ,
-        'C8- mol%'               : 'C8'               ,
-        'C9- mol%'               : 'C9'               ,
-        'C10- mol%'              : 'C10'              ,
-        'C10+ - mol%'            : 'C10+'             ,
-        'Hydrogen sulfide- mol%' : 'Hydrogen sulfide' ,
-        'H2O lb'                 : 'H2O'               # remember this is in lbs
-        }
-        
 def read_chem_constants(path):
     """Read chemistry constants/parameters, return pd.DataFrame."""
     data = pd.read_csv(path)
+    return data
+
+def parse_annual_NG_lab_results(path, sheet):
+    """Read natural-gas lab-test results and return pd.DataFrame."""
+    """
+    Fuel analysis tests completed several times monthly. Data is
+    averaged on a monthly basis.
+	"""
+    data = pd.read_excel(path, sheet_name=sheet, skiprows=8)[:12]
+    data['Sample Date'] = pd.to_datetime(data['Sample Date'])
+    
+    data = data.T.rename(columns=data.T.iloc[0],
+                         index=NG_compounds)['GBTU/CF':'H2O']
+    data.columns.name = 'test_date'
+    data.index.name   = 'compound'
+    
+    # order like fuel gas dataframe
+    data = (data.reindex(index=list(data.index[2:])
+           + [data.index[1], data.index[0]]))
     return data
 
 def parse_annual_FG_lab_results(path, sheet):
@@ -123,50 +143,6 @@ def parse_annual_FG_lab_results(path, sheet):
     data.rename(index=FG_compounds, inplace=True)
         # could also use: data.index = data.index.map(FG_compounds)
 #    data.loc['Oxygen', :] = 0
-    return data
-
-def parse_annual_NG_lab_results(path, sheet):
-    """Read natural-gas lab-test results and return pd.DataFrame."""
-    """
-    Fuel analysis tests completed several times monthly. Data is
-    averaged on a monthly basis.
-	"""
-    data = pd.read_excel(path, sheet_name=sheet, skiprows=8)[:12]
-    data['Sample Date'] = pd.to_datetime(data['Sample Date'])
-    
-    data = data.T.rename(columns=data.T.iloc[0],
-                         index=NG_compounds)['GBTU/CF':'H2O']
-    data.columns.name = 'test_date'
-    data.index.name   = 'compound'
-    
-    # order like fuel gas dataframe
-    data = (data.reindex(index=list(data.index[2:])
-           + [data.index[1], data.index[0]]))
-    return data
-
-def parse_annual_flare_lab_results(path, sheet):
-    """Read fuel-gas lab-test results, return pd.DataFrame."""
-    """
-    Fuel analysis tests completed daily for H2 flare gas.
-	"""
-    data = pd.read_excel(path, sheet_name=sheet, skiprows=4, header=[0,1], index_col=0)
-    # replace missing symbols with NaN
-    data.replace(['****', '--'], pd.np.nan, inplace=True)
-    # get date component; format as date string
-    d_idx = data.columns.get_level_values(0).strftime('%Y-%m-%d')
-    # get datetime.time component as string
-    t = data.columns.get_level_values(1).astype(str)
-    # convert to datetime, format as time string
-    t_idx = pd.to_datetime(t).strftime('%H:%M:%S')
-    # concatenate zipped lists elementwise to create datetime stamps
-    dt_idx = pd.to_datetime(['{} {}'.format(date_, time_) 
-                             for date_, time_
-                             in zip(d_idx,t_idx)])
-    # reassign and rename columns and indices
-    data.columns = dt_idx
-    data.columns.name = 'test_date'
-    data.index.name = 'compound'
-    data.rename(index=FG_compounds, inplace=True)
     return data
 
 def get_monthly_lab_results(annual_gas_test_df, ts_interval):
