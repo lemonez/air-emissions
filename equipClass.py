@@ -95,7 +95,7 @@ class AnnualEquipment(object):
         self.labtab_NG       = '#2H2FdNatGas 2019'
         self.labtab_RFG      = 'RFG 2019'
         self.labtab_cokerFG  = 'Coker FG 2019'
-        self.labtab_CVTG     = 'CVTG 2019 '
+        self.labtab_CVTG     = 'CVTG 2019'
         self.labtab_flare    = '#2H2 Flare 2019'
         
         # equipment mapping (indented descriptions follow assignments)
@@ -132,9 +132,10 @@ class AnnualEquipment(object):
         self.cokerFG_annual = ff.parse_annual_FG_lab_results(self.fpath_analyses,
                                                              self.labtab_cokerFG)
                              # df: annual cokerFG lab-test results
-        self.CVTG_annual    = ff.parse_annual_FG_lab_results(self.fpath_CVTG)
+        self.CVTG_annual    = ff.parse_annual_FG_lab_results(self.fpath_analyses,
+                                                             self.labtab_cokerFG)
                              # df: annual CVTG lab-test results
-        self.flare_annual   = ff.parse_annual_flare_lab_results(self.fpath_analyses,
+        self.flare_annual   = ff.parse_annual_FG_lab_results(self.fpath_analyses,
                                                              self.labtab_flare)
                              # df: annual flare-gas lab-test results
         self.fuel_annual    = self.parse_annual_fuel()
