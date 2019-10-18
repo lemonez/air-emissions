@@ -52,13 +52,14 @@ class AnnualEquipment(object):
         
         # files
         self.fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
-        self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
         self.fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
-        self.fname_RFG      = str(self.year)+'_analyses_RFG.xlsx'   # RFG-sample lab-test data
-        self.fname_NG       = str(self.year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
-        self.fname_CVTG     = str(self.year)+'_analyses_CVTG.xlsx'  # CVTG-sample lab-test data
-        self.fname_flare    = str(self.year)+'_analyses_flare.xlsx' # flare-gas sample lab-test data
-        self.fname_cokerFG  = str(self.year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
+        self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
+        self.fname_analyses = str(self.year)+'_analyses_agg.xlsx'       # all gas lab-test data
+        #self.fname_RFG      = str(self.year)+'_analyses_RFG.xlsx'   # RFG-sample lab-test data
+        #self.fname_NG       = str(self.year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
+        #self.fname_CVTG     = str(self.year)+'_analyses_CVTG.xlsx'  # CVTG-sample lab-test data
+        #self.fname_flare    = str(self.year)+'_analyses_flare.xlsx' # flare-gas sample lab-test data
+        #self.fname_cokerFG  = str(self.year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
         self.fname_ewcoker  = str(self.year)+'_data_EWcoker.xlsx'   # coker CEMS, fuel, flow data
         self.fname_fuel     = str(self.year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
         self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
@@ -71,13 +72,14 @@ class AnnualEquipment(object):
 
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
-        self.fpath_FG_chem  = self.static_prefix+self.fname_FG_chem
         self.fpath_NG_chem  = self.static_prefix+self.fname_NG_chem
-        self.fpath_RFG      = self.annual_prefix+self.fname_RFG
-        self.fpath_NG       = self.annual_prefix+self.fname_NG
-        self.fpath_flare    = self.annual_prefix+self.fname_flare
-        self.fpath_CVTG     = self.annual_prefix+self.fname_CVTG
-        self.fpath_cokerFG  = self.annual_prefix+self.fname_cokerFG
+        self.fpath_FG_chem  = self.static_prefix+self.fname_FG_chem
+        self.fpath_analyses = self.annual_prefix+self.fname_analyses
+        #self.fpath_RFG      = self.annual_prefix+self.fname_RFG
+        #self.fpath_NG       = self.annual_prefix+self.fname_NG
+        #self.fpath_flare    = self.annual_prefix+self.fname_flare
+        #self.fpath_CVTG     = self.annual_prefix+self.fname_CVTG
+        #self.fpath_cokerFG  = self.annual_prefix+self.fname_cokerFG
         self.fpath_ewcoker  = self.annual_prefix+self.fname_ewcoker
         self.fpath_fuel     = self.annual_prefix+self.fname_fuel
         self.fpath_coke     = self.annual_prefix+self.fname_coke
@@ -88,6 +90,13 @@ class AnnualEquipment(object):
         self.fpath_toxicsEFs_calciners = self.annual_prefix \
                                             +self.fname_toxicsEFs_calciners
         self.fpath_EFs      = self.annual_prefix+self.fname_EFs
+        
+        # fuel analysis tabs
+        self.labtab_NG       = '#2H2FdNatGas 2019'
+        self.labtab_RFG      = 'RFG 2019'
+        self.labtab_cokerFG  = 'Coker FG 2019'
+        self.labtab_CVTG     = 'CVTG 2019 '
+        self.labtab_flare    = '#2H2 Flare 2019'
         
         # equipment mapping (indented descriptions follow assignments)
         self.equip          = self.parse_equip_map()
@@ -114,26 +123,27 @@ class AnnualEquipment(object):
         # CEMS, fuel analysis and usage, EFs (indented descriptions follow assignments)
 #save time        self.CEMS_annual    = self.parse_all_monthly_CEMS()
                              # df: annual CEMS data
-        self.RFG_annual     = ff.parse_annual_FG_lab_results(self.fpath_RFG)
-                             # df: annual RFG lab-test results
-        self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_NG)
+        self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_analyses,
+                                                             self.labtab_NG)
                              # df: annual NG lab-test results
-        self.cokerFG_annual = ff.parse_annual_FG_lab_results(self.fpath_cokerFG)
+        self.RFG_annual     = ff.parse_annual_FG_lab_results(self.fpath_analyses,
+                                                             self.labtab_RFG)
+                             # df: annual RFG lab-test results
+        self.cokerFG_annual = ff.parse_annual_FG_lab_results(self.fpath_analyses,
+                                                             self.labtab_cokerFG)
                              # df: annual cokerFG lab-test results
-#        self.coker_annual   = ff.parse_annual_FG_lab_results(self.fpath_coker)
-#                             # df: annual coker-gas lab-test results
-        self.flare_annual   = ff.parse_annual_FG_lab_results(self.fpath_flare)
-                             # df: annual flare-gas lab-test results
         self.CVTG_annual    = ff.parse_annual_FG_lab_results(self.fpath_CVTG)
                              # df: annual CVTG lab-test results
-#change "_data" --> "_annual" for these annual parsing funcs
-#refactoring        self.fuel_annual      = self.parse_annual_fuel()
+        self.flare_annual   = ff.parse_annual_flare_lab_results(self.fpath_analyses,
+                                                             self.labtab_flare)
+                             # df: annual flare-gas lab-test results
+        self.fuel_annual    = self.parse_annual_fuel()
                              # df: hourly fuel data for all equipment
         self.flarefuel_annual = self.parse_annual_flare_fuel()
                              # df: hourly flare-gas data
-        self.coke_data      = self.parse_annual_coke()
+        self.coke_annual    = self.parse_annual_coke()
                              # df: hourly coke data for all calciners
-        self.h2stack_data   = self.parse_annual_h2stack()
+        self.h2stack_annual = self.parse_annual_h2stack()
                              # df: hourly coke data for all calciners
         self.flareEFs       = self.parse_annual_flare_EFs()
                              # df: EFs for flare gas
