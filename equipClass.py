@@ -620,6 +620,7 @@ class MonthlyHB(AnnualHB):
                                             self.CVTG_monthly,
                                             self.annual_equip.fpath_FG_chem,
                                             self.ts_interval)
+    
     def convert_from_ppm(self, fuel_df, cems_df):
         """Convert from ppm if CEMS, return pd.DataFrame of hourly emissions values."""
         """
