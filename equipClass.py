@@ -620,6 +620,51 @@ class MonthlyHB(AnnualHB):
                                             self.CVTG_monthly,
                                             self.annual_equip.fpath_FG_chem,
                                             self.ts_interval)
+    def convert_from_ppm(self, fuel_df, cems_df):
+        """Convert from ppm if CEMS, return pd.DataFrame of hourly emissions values."""
+        """
+        Merge fuel and CEMS data, convert ppm values to lb/hr from
+        list of pollutants with CEMS.
+        """
+        both_df = pd.concat([fuel_df, cems_df], axis=1)
+        
+        if self.unit_key in self.equip_ptags.keys():
+            ptags_list = self.equip_ptags[self.unit_key]
+            cems_pol_list = [self.ptags_pols[tag]
+                             for tag in ptags_list
+                             if self.ptags_pols[tag] != 'o2_%']
+            
+            if self.unit_key == 'h2_plant_2':
+                stack_df = self.get_monthly_h2stack()
+                both_df = pd.concat([both_df, stack_df], axis=1)
+            else:
+                fuel_type = 'fuel_rfg'
+                f_factor  = self.f_factor_RFG
+                HHV       = self.HHV_RFG
+                
+                both_df['dscfh'] = (both_df[fuel_type]
+                                    * 1000 
+                                    * HHV
+                                    * 1/1000000
+                                    * f_factor
+                                    * 20.9 / (20.9 - both_df['o2_%']))
+            
+            # if there are CEMS pols to convert)
+            if 'calciner' in self.unit_key:
+                both_df = self.calculate_calciner_total_stack_flow(both_df)
+            
+            ppm_conv_facts = {
+                             #       MW      const   hr/min
+                             'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
+                             'co' : (28   * 1.557E-7 / 60), # 7.277e-08
+                             'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
+                              }
+            for pol in cems_pol_list:
+                both_df[pol.split('_')[0]] = (
+                                        both_df[pol]
+                                        * ppm_conv_facts[pol.split('_')[0]]
+                                        * both_df['dscfh'])
+        return both_df
     
     def get_conversion_multiplier(self, pol):
         """Pass pollutant name, return float multiplier to convert emissions to lbs."""
