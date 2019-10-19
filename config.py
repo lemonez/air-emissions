@@ -63,3 +63,38 @@ def generate_month_map():
 
 if write_month_names:
     month_map = generate_month_map()
+    
+equip_types = {
+        'coker_1'        : 'coker_old'   ,
+        'coker_2'        : 'coker_old'   ,
+        'coker_e'        : 'coker_new'   ,
+        'coker_w'        : 'coker_new'   ,
+        'calciner_1'     : 'calciner'    ,
+        'calciner_2'     : 'calciner'    ,
+        'h2_plant_2'     : 'h2plant'     ,
+        'h2_flare'       : 'flare'       ,
+        'crude_rfg'      : 'heaterboiler',
+        'crude_vtg'      : 'heaterboiler',
+        'n_vac'          : 'heaterboiler',
+        's_vac'          : 'heaterboiler',
+        'ref_heater_1'   : 'heaterboiler',
+        'ref_heater_2'   : 'heaterboiler',
+        'naptha_heater'  : 'heaterboiler',
+        'naptha_reboiler': 'heaterboiler',
+        'dhds_heater_3'  : 'heaterboiler',
+        'hcr_1'          : 'heaterboiler',
+        'hcr_2'          : 'heaterboiler',
+        'rxn_r_1'        : 'heaterboiler',
+        'rxn_r_4'        : 'heaterboiler',
+        'dhds_heater_1'  : 'heaterboiler',
+        'dhds_heater_1'  : 'heaterboiler',
+        'dhds_reboiler_1': 'heaterboiler',
+        'dhds_reboiler_1': 'heaterboiler',
+        'dhds_heater_2'  : 'heaterboiler',
+        'h_furnace_n'    : 'heaterboiler',
+        'h_furnace_s'    : 'heaterboiler',
+        'boiler_4'       : 'heaterboiler',
+        'boiler_5'       : 'heaterboiler',
+        'boiler_6'       : 'heaterboiler',
+        'boiler_7'       : 'heaterboiler'
+        }
