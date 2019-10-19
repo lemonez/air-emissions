@@ -544,6 +544,12 @@ class AnnualEquipment(object):
             intervals.append(interval)
         return intervals
 
+class AnnualHB(AnnualEquipment):
+    """Parse and store annual heater/boiler data."""
+    def __init__(self, annual_equip):
+        """Constructor for parsing annual heater/boiler data."""
+        self.annual_equip = annual_equip
+
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data."""
     def __init__(self, annual_equip):
