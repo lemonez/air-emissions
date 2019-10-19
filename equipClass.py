@@ -554,33 +554,6 @@ class AnnualHB(AnnualEquipment):
 
 class MonthlyHB(AnnualHB):
     """Calculate monthly heater/boiler emissions."""
-    """
-    Emission Units:
-        'crude_rfg'
-        'crude_vtg'
-        'n_vac'
-        's_vac'
-        'ref_heater_1'
-        'ref_heater_2'
-        'naptha_heater'
-        'naptha_reboiler'
-        'dhds_heater_3'
-        'hcr_1'
-        'hcr_2'
-        'rxn_r_1'
-        'rxn_r_4'
-        'dhds_heater_1'
-        'dhds_heater_1'
-        'dhds_reboiler_1'
-        'dhds_reboiler_1'
-        'dhds_heater_2'
-        'h_furnace_n'
-        'h_furnace_s'
-        'boiler_4'
-        'boiler_5'
-        'boiler_6'
-        'boiler_7'
-    """
     def __init__(self,
              unit_key,
              month,
@@ -909,11 +882,6 @@ class AnnualCoker(AnnualEquipment):
 
 class MonthlyCoker(AnnualCoker):
     """Calculate monthly coker emissions."""
-    """
-    Emission Units:
-        'coker_e'
-        'coker_w'
-    """
 # replace 'rfg_mscfh' with 'fuel_rfg' once units are figured out
     col_name_order = ['equipment', 'month',
                       'cokerfg_mscfh', 'pilot_mscfh', 'co2']
