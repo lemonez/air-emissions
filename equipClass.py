@@ -233,7 +233,8 @@ class AnnualEquipment(object):
                                        values='ef').T.to_dict()
         
         return efs, pollutant_units, equip_EF_dict
-    
+
+#not yet implemented/tested for 2019
     def parse_annual_calciner_toxics_EFs(self):
         """Parse calciner EF data, return pd.DataFrame."""
         """
@@ -250,6 +251,7 @@ class AnnualEquipment(object):
         caltox['units'] = 'lbs/ton calcined coke'
         return caltox
     
+#not yet implemented/tested for 2019
     def parse_annual_toxics_EFs(self):
         """Parse EFs for toxics; return pd.DataFrame."""
         toxics = pd.read_excel(self.fpath_toxicsEFs, skipfooter=5,
@@ -549,6 +551,166 @@ class AnnualHB(AnnualEquipment):
     def __init__(self, annual_equip):
         """Constructor for parsing annual heater/boiler data."""
         self.annual_equip = annual_equip
+
+class MonthlyHB(AnnualHB):
+    """Calculate monthly heater/boiler emissions."""
+    """
+    Emission Units:
+        'crude_rfg'
+        'crude_vtg'
+        'n_vac'
+        's_vac'
+        'ref_heater_1'
+        'ref_heater_2'
+        'naptha_heater'
+        'naptha_reboiler'
+        'dhds_heater_3'
+        'hcr_1'
+        'hcr_2'
+        'rxn_r_1'
+        'rxn_r_4'
+        'dhds_heater_1'
+        'dhds_heater_1'
+        'dhds_reboiler_1'
+        'dhds_reboiler_1'
+        'dhds_heater_2'
+        'h_furnace_n'
+        'h_furnace_s'
+        'boiler_4'
+        'boiler_5'
+        'boiler_6'
+        'boiler_7'
+    """
+    def __init__(self,
+             unit_key,
+             month,
+             annual_eu):
+        """Constructor for individual emission unit calculations."""
+                # instance attributes passed as args
+        self.unit_key       = unit_key
+        self.month          = month
+        self.annual_eu      = annual_eu # aka Annual{equiptype}()
+        self.annual_equip   = annual_eu.annual_equip # aka AnnualEquipment()
+        
+        self.ts_interval    = self.annual_equip.ts_intervals[self.month
+                                                - self.annual_equip.month_offset]
+        self.EFs            = self.annual_equip.EFs[self.month][0]
+        self.EFunits        = self.annual_equip.EFs[self.month][1]
+        self.equip_EF       = self.annual_equip.EFs[self.month][2]
+        self.col_name_order = self.annual_equip.col_name_order
+        self.equip_ptags    = self.annual_equip.equip_ptags
+        self.ptags_pols     = self.annual_equip.ptags_pols
+        
+        # monthly data
+        self.fuel_monthly   = self.get_monthly_fuel()
+        self.CEMS_monthly   = self.get_monthly_CEMS()
+        
+        # fuel-sample lab results (pd.DataFrame)
+        self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
+        self.CVTG_monthly   = ff.get_monthly_lab_results(self.annual_equip.CVTG_annual, self.ts_interval)
+        # fuel higher heating values (float)
+        self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
+        self.HHV_CVTG       = ff.calculate_monthly_HHV(self.CVTG_monthly)
+        # fuel f-factors (floats) calculated using static chem data
+        self.f_factor_RFG   = ff.calculate_monthly_f_factor(
+                                            self.RFG_monthly,
+                                            self.annual_equip.fpath_FG_chem,
+                                            self.ts_interval)
+        self.f_factor_CVTG  = ff.calculate_monthly_f_factor(
+                                            self.CVTG_monthly,
+                                            self.annual_equip.fpath_FG_chem,
+                                            self.ts_interval)
+    
+    def get_conversion_multiplier(self, pol):
+        """Pass pollutant name, return float multiplier to convert emissions to lbs."""
+        if (self.EFunits.loc[self.unit_key]
+                        .loc[pol].loc['units'] == 'lb/mmbtu'):
+            if self.unit_key in ['coker_1', 'coker_2']:
+                multiplier = 1/1000 * self.HHV_coker
+            elif self.unit_key == 'crude_vtg':
+                multiplier = 1/1000 * self.HHV_CVTG
+            else:
+                multiplier = 1/1000 * self.HHV_RFG
+        elif (self.EFunits.loc[self.unit_key]
+                        .loc[pol].loc['units'] == 'lb/mscf'):
+            multiplier = 1
+        elif (self.EFunits.loc[self.unit_key]
+                        .loc[pol].loc['units'] == 'lb/mmscf'):
+            multiplier = 1/1000
+        elif (self.EFunits.loc[self.unit_key]
+                        .loc[pol].loc['units'] == 'lb/hr'):
+            fuel_type = 'fuel_rfg'
+            if self.unit_key == 'h2_plant_2':
+                fuel_type = 'fuel_ng'
+            fuel_df = self.get_monthly_fuel()
+            # count total hours where (>1 mscf) fuel was burned
+            multiplier = fuel_df.loc[fuel_df[fuel_type] > 1, fuel_type].count()
+        else:
+            multiplier = 1
+        return multiplier
+    
+    def get_monthly_CEMS(self):
+        """Return pd.DataFrame of emis unit CEMS data for specified month."""
+        CEMS_annual = self.annual_equip.CEMS_annual.copy()
+        if self.unit_key in self.equip_ptags.keys():
+            ptags_list = self.equip_ptags[self.unit_key]
+            # subset PItags of interest
+            sub = CEMS_annual[CEMS_annual['ptag'].isin(ptags_list)]
+            sub.reset_index(inplace=True)
+            sub_pivot = (sub.pivot(index='tstamp',
+                                   columns="ptag",
+                                   values="val")
+                            .rename(columns=self.ptags_pols))
+            sub2_pivot = sub_pivot.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1]]
+            return sub2_pivot
+        else: # empty df if no CEMS
+            no_CEMS = pd.DataFrame({'no_CEMS_data' : []})
+            return no_CEMS        
+    
+    def get_monthly_fuel(self):
+        """Return pd.DataFrame of emis unit fuel usage for specified month."""
+        fuel_data = self.annual_equip.fuel_annual
+        
+        if self.unit_key == 'h2_plant_2': # only natural gas
+            ng_fuel_ser = (fuel_data.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1],
+                            self.unit_key])
+            fuel_df = ng_fuel_ser.to_frame('fuel_ng')
+            fuel_df['fuel_rfg'] = 0
+            fuel_df = fuel_df[['fuel_rfg', 'fuel_ng']] # reorder for consistency
+        elif self.unit_key == 'calciner_1': # rfg and natural gas
+            rfg_fuel_ser = (fuel_data.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1],
+                            '70 (RFG)'])
+            ng_fuel_ser  = (fuel_data.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1],
+                            '70 (NG)'])
+            fuel_df = pd.concat([rfg_fuel_ser, ng_fuel_ser], axis=1)
+            fuel_df.columns = ['fuel_rfg', 'fuel_ng']
+        elif self.unit_key == 'calciner_2': # rfg and natural gas
+            rfg_fuel_ser = (fuel_data.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1],
+                            '71 (RFG)'])
+            ng_fuel_ser  = (fuel_data.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1],
+                            '71 (NG)'])
+            fuel_df = pd.concat([rfg_fuel_ser, ng_fuel_ser], axis=1)
+            fuel_df.columns = ['fuel_rfg', 'fuel_ng']
+        else: # only rfg
+            rfg_fuel_ser = (fuel_data.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1],
+                            self.unit_key])
+            fuel_df = rfg_fuel_ser.to_frame('fuel_rfg')
+            fuel_df['fuel_ng'] = 0
+        return fuel_df
 
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data."""
