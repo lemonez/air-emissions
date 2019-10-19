@@ -601,10 +601,6 @@ class MonthlyHB(AnnualHB):
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
         
-        # monthly data
-        self.fuel_monthly   = self.get_monthly_fuel()
-        self.CEMS_monthly   = self.get_monthly_CEMS()
-        
         # fuel-sample lab results (pd.DataFrame)
         self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
         self.CVTG_monthly   = ff.get_monthly_lab_results(self.annual_equip.CVTG_annual, self.ts_interval)
@@ -612,22 +608,94 @@ class MonthlyHB(AnnualHB):
         self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
         self.HHV_CVTG       = ff.calculate_monthly_HHV(self.CVTG_monthly)
         # fuel f-factors (floats) calculated using static chem data
-        self.f_factor_RFG   = ff.calculate_monthly_f_factor(
-                                            self.RFG_monthly,
-                                            self.annual_equip.fpath_FG_chem,
-                                            self.ts_interval)
+#        self.f_factor_RFG   = ff.calculate_monthly_f_factor(
+#                                            self.RFG_monthly,
+#                                            self.annual_equip.fpath_FG_chem,
+#                                            self.ts_interval)
         self.f_factor_CVTG  = ff.calculate_monthly_f_factor(
                                             self.CVTG_monthly,
                                             self.annual_equip.fpath_FG_chem,
                                             self.ts_interval)
+
+    def calculate_monthly_equip_emissions(self):
+        """Return pd.DataFrame of calculated monthly emissions."""
+    # does it return a series or a df?
+        """
+        Calculate emissions for pollutants w/out CEMS based on
+        fuel (or coke), EFs, and HHVs.
+        """
+        hourly_df = self.convert_from_ppm()
+        monthly = hourly_df.sum()
+        # calculate all pollutants except for H2SO4
+        if 'calciner' in self.unit_key:
+            coke_tons = self.get_monthly_coke()['coke_tons'].sum()
+            stack_dscf = monthly.loc['dscfh']
+
+        for pol in ['nox', 'co', 'so2', 'voc', 'pm', 'pm25', 'pm10']:
+            # if no CEMS
+            if pol not in monthly.index:
+                # need this logic to avoid errors while PM25 & PM 10 EFs are added
+                if pol not in self.EFunits.loc[self.unit_key].index:
+                    monthly.loc[pol] = -9999*2000/12 # error flag that will show up as -9999
+                else:
+                    if (self.EFunits.loc[self.unit_key]
+                                    .loc[pol]
+                                    .loc['units'] == 'lb/hr'):
+                        # don't multiply by fuel quantity if EF is in lb/hr
+                        EF_multiplier = 1
+                    else:
+                        if self.unit_key == 'h2_plant_2':
+                            fuel_type = 'fuel_ng'
+                        else:
+                            fuel_type = 'fuel_rfg'
+                    
+                        EF_multiplier = monthly.loc[fuel_type]
+                    
+                    if 'calciner' in self.unit_key:
+                        if pol in ['co', 'voc']:
+                            EF_multiplier = coke_tons
+                        if pol in ['pm', 'pm25', 'pm10']:
+                            if 'calciner_1' in self.unit_key:
+                                EF_multiplier = coke_tons
+                            if 'calciner_2' in self.unit_key:
+                                EF_multiplier = stack_dscf / 1000            
+                    
+                    monthly.loc[pol] = (EF_multiplier
+                                        * self.equip_EF[self.unit_key][pol]
+                                        * self.get_conversion_multiplier(pol))
+            
+        # now calculate H2SO4 separately
+        if 'calciner' in self.unit_key:
+            EF_multiplier = coke_tons
+            monthly.loc['h2so4'] = (EF_multiplier
+                                    * self.equip_EF[self.unit_key]['h2so4'])
+        else:
+            monthly.loc['h2so4'] = monthly.loc['so2'] * 0.026
+            
+        # set other values in series
+        monthly.loc['equipment'] = self.unit_key
+        monthly.loc['month'] = self.month
+        monthly = monthly.reindex(self.col_name_order)
+        monthly.loc[self.col_name_order[4:-1]] = monthly.loc[
+                                self.col_name_order[4:-1]] / 2000 # lbs --> tons
+        
+# begin temporary workaround        
+        # if fuel not used in emis calc, set to zero
+        if self.unit_key in ['h2_plant_2', 'calciner_1', 'calciner_2']:
+            monthly.loc['fuel_ng'] = 0
+# end temporary workaround
+        
+        return monthly
     
-    def convert_from_ppm(self, fuel_df, cems_df):
-        """Convert from ppm if CEMS, return pd.DataFrame of hourly emissions values."""
+    def convert_from_ppm(self):
+        """Convert CEMS from ppm if needed, return pd.DataFrame of hourly emissions values."""
         """
         Merge fuel and CEMS data, convert ppm values to lb/hr from
         list of pollutants with CEMS.
         """
-        both_df = pd.concat([fuel_df, cems_df], axis=1)
+        both_df = pd.concat([self.get_monthly_fuel(),
+                             self.get_monthly_CEMS()],
+                             axis=1)
         
         if self.unit_key in self.equip_ptags.keys():
             ptags_list = self.equip_ptags[self.unit_key]
