@@ -65,10 +65,10 @@ class AnnualEquipment(object):
         self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
         self.fname_flarefuel= str(self.year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
         self.fname_h2stack  = str(self.year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
-        self.fname_flareEFs = str(self.year)+'_EFs_flare.xlsx'      # EFs for H2 flare
+        self.fname_flareEFs = str(self.year)+'_EFs_flare_DUMMY.xlsx'      # EFs for H2 flare
         self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
         self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
-        self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
+        self.fname_EFs      = 'EFs_monthly_DUMMY.xlsx'        # monthly-EF excel workbook
 
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
@@ -118,10 +118,10 @@ class AnnualEquipment(object):
         """Parse facility-wide annual data."""
         start_time_seconds = time.time()
         start_time = time.strftime("%H:%M:%S")
-        print('annual data parsing began at '+start_time)
+        print('began parsing annual data at '+start_time)
 
         # CEMS, fuel analysis and usage, EFs (indented descriptions follow assignments)
-#save time        self.CEMS_annual    = self.parse_all_monthly_CEMS()
+        self.CEMS_annual    = self.parse_all_monthly_CEMS()
                              # df: annual CEMS data
         self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_analyses,
                                                              self.labtab_NG)
@@ -148,16 +148,16 @@ class AnnualEquipment(object):
                              # df: hourly coke data for all calciners
         self.flareEFs       = self.parse_annual_flare_EFs()
                              # df: EFs for flare gas
-        self.toxicsEFs      = self.parse_annual_toxics_EFs()
-                             # df: EFs for toxics
-        self.toxicsEFs_calciners = self.parse_annual_calciner_toxics_EFs()
-                             # df: EFs for calciner toxics
+        #self.toxicsEFs      = self.parse_annual_toxics_EFs()
+        #                     # df: EFs for toxics
+        #self.toxicsEFs_calciners = self.parse_annual_calciner_toxics_EFs()
+        #                     # df: EFs for calciner toxics
         self.EFs            = self.parse_annual_EFs()
                              # dict: {integer month: (EFs df, EFunits df, equip_EF_dict)}
         
         end_time_seconds = time.time()
         end_time = time.strftime("%H:%M:%S")
-        print('annual data parsing ended at '+end_time)
+        print('completed parsing annual data at '+end_time)
         total_time = round(end_time_seconds - start_time_seconds)
         print('Total init time: '+str(total_time)+' seconds)')
     
@@ -314,7 +314,10 @@ class AnnualEquipment(object):
         coke_df['tstamp'] = pd.to_datetime(coke_df['1h'])
         coke_df.set_index('tstamp', inplace=True)
         coke_df = coke_df[['calciner_1', 'calciner_2']]
-        
+        if not (coke_df.dtypes.unique()[0] == 'float64' and 
+                len(coke_df.dtypes.unique()) == 1):
+            coke_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan},
+                                                                    inplace=True)
         coke_df = coke_df.clip(lower=0)
         return coke_df    
     
@@ -329,7 +332,12 @@ class AnnualEquipment(object):
                         , inplace=True)
         flare_df['tstamp'] = pd.to_datetime(flare_df['tstamp'])
         flare_df.set_index('tstamp', inplace=True)
-        flare_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan}, inplace=True)
+        
+        # check if all values are not float (aka if there are strings)
+        if not (flare_df.dtypes.unique()[0] == 'float64' and 
+                len(flare_df.dtypes.unique()) == 1):
+            flare_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan},
+                                                                    inplace=True)
         flare_df['flare_header_flow'] = flare_df['flare_header_flow'].clip(lower=0)
         flare_df['discharge_to_flare'] = flare_df['discharge_to_flare'].clip(lower=0)
         return flare_df
@@ -428,15 +436,10 @@ class AnnualEquipment(object):
     @staticmethod
     def parse_monthly_CEMS(path):
         """Read one month of hourly CEMS data, return pd.DataFrame."""
-        cems_df = (pd.read_csv(path, usecols=[1,2,3])
-                     .rename(columns={
-                                'DtTm':'tstamp',
-                                'hVal_NWCAA':'val',
-                                'refNAME':'ptag'
-                                }
-                            )
-                  )
+        cems_df = pd.read_csv(path, usecols=[1,2,3], header=None)
+        cems_df.columns = ['ptag', 'tstamp', 'val']
         cems_df['tstamp'] = pd.to_datetime(cems_df['tstamp'])
+        print('    parsed CEMS data in: '+path)
         return cems_df
     
     def generate_unitkey_unitname_dict(self):
