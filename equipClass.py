@@ -114,6 +114,9 @@ class AnnualEquipment(object):
                              
         self.parse_annual_facility_data()
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+#++DATA-PARSING METHODS CALLED BY self.parse_annual_facility_data()++++++++++++#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
     def parse_annual_facility_data(self):
         """Parse facility-wide annual data."""
         start_time_seconds = time.time()
@@ -121,7 +124,7 @@ class AnnualEquipment(object):
         print('began parsing annual data at '+start_time)
 
         # CEMS, fuel analysis and usage, EFs (indented descriptions follow assignments)
-#        self.CEMS_annual    = self.parse_all_monthly_CEMS()
+        self.CEMS_annual    = self.parse_all_monthly_CEMS()
                              # df: annual CEMS data
         self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_analyses,
                                                              self.labtab_NG)
@@ -398,21 +401,27 @@ class AnnualEquipment(object):
         """Combine monthly CEMS data into annual, return pd.DataFrame."""
         """
         df structure: (WED Pt. x Timestamp)
-        df size: <1MB for year of data
         """
-        CEMS_paths = sorted(glob.glob(self.CEMS_dir+'*'))
+        CEMS_paths = self.subset_CEMS_filepaths()
         
         monthly_CEMS = []
         for fpath in CEMS_paths:
             month = self.parse_monthly_CEMS(fpath)
             monthly_CEMS.append(month)
-        
         annual_CEMS = (pd.concat(monthly_CEMS)
                          .sort_values(['ptag', 'tstamp'])
                          .set_index('tstamp'))
-        
         annual_CEMS['val'] = annual_CEMS['val'].clip(lower=0)
         return annual_CEMS
+    
+    def subset_CEMS_filepaths(self):
+        """Return list of filepaths to parse based on months specified in config file."""
+        CEMS_paths_all = sorted(glob.glob(self.CEMS_dir+'*'))
+        months_to_parse = [month for month in cf.months_to_calculate]
+        CEMS_paths_parse = [path for path in CEMS_paths_all
+                          if int(path.split(self.CEMS_dir)[-1][:2])
+                          in months_to_parse]
+        return CEMS_paths_parse
     
     @staticmethod
     def parse_monthly_CEMS(path):
@@ -422,7 +431,10 @@ class AnnualEquipment(object):
         cems_df['tstamp'] = pd.to_datetime(cems_df['tstamp'])
         print('    parsed CEMS data in: '+path)
         return cems_df
-    
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+#++EQUIPMENT-MAPPING METHODS CALLED BY self.__init__()+++++++++++++++++++++++++#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
     def generate_unitkey_unitname_dict(self):
         """Return dict of equipment keys ({unit_key: unit_name})"""
         """
@@ -525,59 +537,14 @@ class AnnualEquipment(object):
             intervals.append(interval)
         return intervals
 
-class AnnualHB(AnnualEquipment):
-    """Parse and store annual heater/boiler data."""
-    def __init__(self, annual_equip):
-        """Constructor for parsing annual heater/boiler data."""
-        self.annual_equip = annual_equip
-
-class MonthlyHB(AnnualHB):
-    """Calculate monthly heater/boiler emissions."""
-    def __init__(self,
-             unit_key,
-             month,
-             annual_eu):
-        """Constructor for individual emission unit calculations."""
-                # instance attributes passed as args
-        self.unit_key       = unit_key
-        self.month          = month
-        self.annual_eu      = annual_eu # aka Annual{equiptype}()
-        self.annual_equip   = annual_eu.annual_equip # aka AnnualEquipment()
-        
-        self.ts_interval    = self.annual_equip.ts_intervals[self.month
-                                                - self.annual_equip.month_offset]
-        self.EFs            = self.annual_equip.EFs[self.month][0]
-        self.EFunits        = self.annual_equip.EFs[self.month][1]
-        self.equip_EF       = self.annual_equip.EFs[self.month][2]
-        self.col_name_order = self.annual_equip.col_name_order
-        self.equip_ptags    = self.annual_equip.equip_ptags
-        self.ptags_pols     = self.annual_equip.ptags_pols
-        
-        # fuel-sample lab results (pd.DataFrame)
-        self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
-        self.CVTG_monthly   = ff.get_monthly_lab_results(self.annual_equip.CVTG_annual, self.ts_interval)
-        # fuel higher heating values (float)
-        self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
-        self.HHV_CVTG       = ff.calculate_monthly_HHV(self.CVTG_monthly)
-        # fuel f-factors (floats) calculated using static chem data
-#        self.f_factor_RFG   = ff.calculate_monthly_f_factor(
-#                                            self.RFG_monthly,
-#                                            self.annual_equip.fpath_FG_chem,
-#                                            self.ts_interval)
-        self.f_factor_CVTG  = ff.calculate_monthly_f_factor(
-                                            self.CVTG_monthly,
-                                            self.annual_equip.fpath_FG_chem,
-                                            self.ts_interval)
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+#++EMISSIONS-CALCULATION METHODS CALLED/SHARED BY MONTHLY CHILD CLASSES++++++++#
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+# TODO: refactor this method if time; it is a hot mess
     def calculate_monthly_equip_emissions(self):
-        """Return pd.DataFrame of calculated monthly emissions."""
-    # does it return a series or a df?
-        """
-        Calculate emissions for pollutants w/out CEMS based on
-        fuel (or coke), EFs, and HHVs.
-        """
-        hourly_df = self.convert_from_ppm()
-        monthly = hourly_df.sum()
+        """Return pd.Series of equipment unit emissions for specified month."""
+        hourly = self.convert_from_ppm()
+        monthly = hourly.sum()
         # calculate all pollutants except for H2SO4
         if 'calciner' in self.unit_key:
             coke_tons = self.get_monthly_coke()['coke_tons'].sum()
@@ -640,21 +607,10 @@ class MonthlyHB(AnnualHB):
         return monthly
     
     def convert_from_ppm(self):
-        """Convert CEMS from ppm if needed, return pd.DataFrame of hourly emissions values."""
-        """
-        Merge fuel and CEMS data, convert ppm values to lb/hr from
-        list of pollutants with CEMS.
-        """
-        both_df = pd.concat([self.get_monthly_fuel(),
-                             self.get_monthly_CEMS()],
-                             axis=1)
+        """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
+        both_df = self.merge_fuel_and_CEMS()
         
         if self.unit_key in self.equip_ptags.keys():
-            ptags_list = self.equip_ptags[self.unit_key]
-            cems_pol_list = [self.ptags_pols[tag]
-                             for tag in ptags_list
-                             if self.ptags_pols[tag] != 'o2_%']
-            
             if self.unit_key == 'h2_plant_2':
                 stack_df = self.get_monthly_h2stack()
                 both_df = pd.concat([both_df, stack_df], axis=1)
@@ -669,7 +625,9 @@ class MonthlyHB(AnnualHB):
                                     * 1/1000000
                                     * f_factor
                                     * 20.9 / (20.9 - both_df['o2_%']))
-            
+# would like to break this into another method so that 
+# calculate_calciner_total_stack_flow() does not need a df passed to it as an arg
+# right now it is difficult to test, and this method is too nested
             # if there are CEMS pols to convert)
             if 'calciner' in self.unit_key:
                 both_df = self.calculate_calciner_total_stack_flow(both_df)
@@ -680,13 +638,51 @@ class MonthlyHB(AnnualHB):
                              'co' : (28   * 1.557E-7 / 60), # 7.277e-08
                              'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
                               }
+            
+            ptags_list = self.equip_ptags[self.unit_key]
+            cems_pol_list = [self.ptags_pols[tag]
+                             for tag in ptags_list
+                             if self.ptags_pols[tag] != 'o2_%']
             for pol in cems_pol_list:
                 both_df[pol.split('_')[0]] = (
                                         both_df[pol]
                                         * ppm_conv_facts[pol.split('_')[0]]
                                         * both_df['dscfh'])
         return both_df
-    
+
+    def merge_fuel_and_CEMS(self):
+        """Merge fuel and CEMS data, return pd.DataFrame."""
+        return pd.concat([self.get_monthly_fuel(),
+                          self.get_monthly_CEMS()],
+                          axis=1)
+
+    def calculate_calciner_total_stack_flow(self, df1):
+        """Return pd.DataFrame of calciner emissions."""
+        """
+        'Equation 2' from MAR used for calciner_2:
+        stack flow = 1823.2 * calcinced coke + 28162
+          (ACFM)                  (STPH)      (ACFM)
+        """
+        monthly_coke = self.get_monthly_coke()
+        df2 = pd.concat([df1, monthly_coke], axis=1)
+        
+        if self.unit_key == 'calciner_1':
+            # value from calciner_1 tab in MAR 2018
+            stack_flow = 99522 # dscf / ton coke
+            df2['WESP_flow'] = df2['coke_tons'] * stack_flow
+        if self.unit_key == 'calciner_2':
+            # values from calciner_2 tab in MAR 2018
+            stack_flow = 1823.2 # acfm
+            prod_rate  = 28162  # units?
+            dscf_acf   = 0.669  # dscf per acf conversion factor
+            
+            # must be multiplied by 60 to convert from /min to /hr
+            df2['WESP_flow'] = ((df2['coke_tons'] * stack_flow + prod_rate)
+                                 * dscf_acf * 60)
+
+        df2['dscfh'] = df2['WESP_flow'] + df2['dscfh']
+        return df2    
+
     def get_conversion_multiplier(self, pol):
         """Pass pollutant name, return float multiplier to convert emissions to lbs."""
         if (self.EFunits.loc[self.unit_key]
@@ -734,6 +730,17 @@ class MonthlyHB(AnnualHB):
         else: # empty df if no CEMS
             no_CEMS = pd.DataFrame({'no_CEMS_data' : []})
             return no_CEMS        
+
+    def get_monthly_coke(self):
+        """Return pd.DataFrame of emis unit coke usage for specified month."""
+        month_coke = (self.coke_annual.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1],
+                                self.unit_key])
+        
+        month_coke = pd.DataFrame(month_coke)
+        month_coke.columns = ['coke_tons']
+        return month_coke
     
     def get_monthly_fuel(self):
         """Return pd.DataFrame of emis unit fuel usage for specified month."""
@@ -776,7 +783,54 @@ class MonthlyHB(AnnualHB):
                             self.unit_key])
             fuel_df = rfg_fuel_ser.to_frame('fuel_rfg')
             fuel_df['fuel_ng'] = 0
-        return fuel_df
+        return fuel_df 
+
+class AnnualHB(AnnualEquipment):
+    """Parse and store annual heater/boiler data."""
+    def __init__(self, annual_equip):
+        """Constructor for parsing annual heater/boiler data."""
+        self.annual_equip = annual_equip
+
+class MonthlyHB(AnnualHB):
+    """Calculate monthly heater/boiler emissions."""
+    def __init__(self,
+             unit_key,
+             month,
+             annual_eu):
+        """Constructor for individual emission unit calculations."""
+                # instance attributes passed as args
+        self.unit_key       = unit_key
+        self.month          = month
+        self.annual_eu      = annual_eu # aka Annual{equiptype}()
+        self.annual_equip   = annual_eu.annual_equip # aka AnnualEquipment()
+        
+        self.ts_interval    = self.annual_equip.ts_intervals[self.month
+                                                - self.annual_equip.month_offset]
+        self.EFs            = self.annual_equip.EFs[self.month][0]
+        self.EFunits        = self.annual_equip.EFs[self.month][1]
+        self.equip_EF       = self.annual_equip.EFs[self.month][2]
+        self.col_name_order = self.annual_equip.col_name_order
+        self.equip_ptags    = self.annual_equip.equip_ptags
+        self.ptags_pols     = self.annual_equip.ptags_pols
+        
+        # fuel-sample lab results (pd.DataFrame)
+        self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
+        self.CVTG_monthly   = ff.get_monthly_lab_results(self.annual_equip.CVTG_annual, self.ts_interval)
+        # fuel higher heating values (float)
+        self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
+        self.HHV_CVTG       = ff.calculate_monthly_HHV(self.CVTG_monthly)
+        # fuel f-factors (floats) calculated using static chem data
+# TODO: figure out error produced from this next line -- '8000' is dummy data
+        self.f_factor_RFG   = 8000#ff.calculate_monthly_f_factor(
+                                  #          self.RFG_monthly,
+                                  #          self.annual_equip.fpath_FG_chem,
+                                  #          self.ts_interval)
+        self.f_factor_CVTG  = ff.calculate_monthly_f_factor(
+                                            self.CVTG_monthly,
+                                            self.annual_equip.fpath_FG_chem,
+                                            self.ts_interval)
+        
+        self.monthly_emis   = self.calculate_monthly_equip_emissions()
 
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data."""
@@ -991,6 +1045,42 @@ class AnnualCalciner(AnnualEquipment):
                                                                     inplace=True)
         coke_df = coke_df.clip(lower=0)
         return coke_df
+        
+class MonthlyCalciner(AnnualCalciner):
+    """Calculate monthly calciner emissions."""
+    def __init__(self,
+             unit_key,
+             month,
+             annual_eu):
+        """Constructor for individual emission unit calculations."""
+        self.month          = month
+        self.unit_key       = unit_key
+        self.annual_eu      = annual_eu
+        self.annual_equip   = annual_eu.annual_equip
+        
+        self.ts_interval    = self.annual_equip.ts_intervals[self.month
+                                                - self.annual_equip.month_offset]        
+# why is it not using self.EFs? should it be calling this?
+        # self.EFs            = self.annual_equip.EFs[self.month][0]
+        self.EFunits        = self.annual_equip.EFs[self.month][1]
+        self.equip_EF       = self.annual_equip.EFs[self.month][2]
+        self.col_name_order = self.annual_equip.col_name_order
+        self.equip_ptags    = self.annual_equip.equip_ptags
+        self.ptags_pols     = self.annual_equip.ptags_pols
+
+        # fuel-sample lab results (pd.DataFrame)
+        self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
+        # fuel higher heating values (float)
+        self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
+# TODO: figure out error produced from this next line -- '8000' is dummy data
+        self.f_factor_RFG   = 8000#ff.calculate_monthly_f_factor(
+                                  #          self.RFG_monthly,
+                                  #          self.annual_equip.fpath_FG_chem,
+                                  #          self.ts_interval)
+
+        self.coke_annual    = self.annual_eu.coke_annual
+        self.monthly_emis   = self.calculate_monthly_equip_emissions()
+
 ##============================================================================##
 
 # print timestamp for checking import timing
