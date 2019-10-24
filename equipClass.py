@@ -195,7 +195,7 @@ class AnnualEquipment(object):
     #    efs['pollutant'].replace({'pm10':'pm'}, inplace=True)
         efs['units'].replace({'lb pm/ton coke':'lb/ton coke'}, inplace=True)
         
-        # subset pollutant EFs, discard cems, change EFs to numeric
+        # subset pollutant EFs
         efs = efs[efs['pollutant'].isin(['nox', 'co', 'so2', 'voc',
                                          'pm', 'pm25', 'pm10', 'h2so4'])]
         
