@@ -737,10 +737,16 @@ class AnnualEquipment(object):
                             self.ts_interval[0]:
                             self.ts_interval[1],
                                 self.unit_key])
-        
         month_coke = pd.DataFrame(month_coke)
         month_coke.columns = ['coke_tons']
         return month_coke
+
+    def get_monthly_flare_fuel(self):
+        """Return pd.DataFrame of flare fuel for specified month."""
+        fuel_df = self.flarefuel_annual.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1]]
+        return fuel_df
     
     def get_monthly_fuel(self):
         """Return pd.DataFrame of emis unit fuel usage for specified month."""
@@ -1069,7 +1075,9 @@ class MonthlyCalciner(AnnualCalciner):
         self.ptags_pols     = self.annual_equip.ptags_pols
 
         # fuel-sample lab results (pd.DataFrame)
-        self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
+        self.RFG_monthly    = ff.get_monthly_lab_results(
+                                            self.annual_equip.RFG_annual,
+                                            self.ts_interval)
         # fuel higher heating values (float)
         self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
 # TODO: figure out error produced from this next line -- '8000' is dummy data
@@ -1086,6 +1094,7 @@ class AnnualFlare(AnnualEquipment):
     def __init__(self, annual_equip):
         """Constructor for parsing annual flare data."""
         self.annual_equip = annual_equip
+
 
 
 ##============================================================================##
