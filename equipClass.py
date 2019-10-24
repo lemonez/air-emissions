@@ -37,7 +37,6 @@ class AnnualEquipment(object):
         self.month_offset   = cf.month_offset
         self.ts_intervals   = self.generate_ts_interval_list()
                              # list of tuples: [monthly intervals (start, end)]
-        print(self.ts_intervals) # DEBUG
         
         # formatting
         self.col_name_order = ['equipment', 'month', 'fuel_rfg', 'fuel_ng',
@@ -170,7 +169,6 @@ class AnnualEquipment(object):
         """
         annual_EF_container = {}
         for month in self.months_to_calc:
-            print(str(month)) # DEBUG
             tabname = self.ts_intervals[month-self.month_offset][0].strftime('%Y_%m') # monthly EF excel tab named as 'YYYY_MM'
             annual_EF_container[month] = self.parse_EF_tab(tabname) # tuple (a, b, c) is saved to dict 
         return annual_EF_container
@@ -1220,6 +1218,11 @@ class MonthlyFlare(AnnualFlare):
                             self.ts_interval[1]]
         return fuel_df
 
+class AnnualH2Plant(AnnualEquipment):
+    """Parse and store annual calciner data."""
+    def __init__(self, annual_equip):
+        """Constructor for parsing annual calciner data."""
+        self.annual_equip = annual_equip
 ##============================================================================##
 
 # print timestamp for checking import timing
