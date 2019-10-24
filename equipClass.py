@@ -68,7 +68,7 @@ class AnnualEquipment(object):
         self.fname_flareEFs = str(self.year)+'_EFs_flare_DUMMY.xlsx'      # EFs for H2 flare
         self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
         self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
-        self.fname_EFs      = 'EFs_monthly_DUMMY.xlsx'        # monthly-EF excel workbook
+        self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
 
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
@@ -121,7 +121,7 @@ class AnnualEquipment(object):
         print('began parsing annual data at '+start_time)
 
         # CEMS, fuel analysis and usage, EFs (indented descriptions follow assignments)
-        self.CEMS_annual    = self.parse_all_monthly_CEMS()
+#        self.CEMS_annual    = self.parse_all_monthly_CEMS()
                              # df: annual CEMS data
         self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_analyses,
                                                              self.labtab_NG)
@@ -142,8 +142,6 @@ class AnnualEquipment(object):
                              # df: hourly fuel data for all equipment
         self.flarefuel_annual = self.parse_annual_flare_fuel()
                              # df: hourly flare-gas data
-        self.coke_annual    = self.parse_annual_coke()
-                             # df: hourly coke data for all calciners
         self.h2stack_annual = self.parse_annual_h2stack()
                              # df: hourly coke data for all calciners
         self.flareEFs       = self.parse_annual_flare_EFs()
@@ -303,25 +301,6 @@ class AnnualEquipment(object):
         
         stack = stack.clip(lower=0)
         return stack
-    
-    def parse_annual_coke(self):
-        """Read annual coke data for calciners, return pd.DataFrame."""
-        coke_df = pd.read_excel(self.fpath_coke, skiprows=[0,1], header=[0,1])
-        coke_df.columns = coke_df.columns.droplevel(1)
-        coke_df.columns.name = 'unit_key'
-        
-        # sum hearths 1 and 2, rename, reindex
-        coke_df['calciner_1'] = coke_df['20WK5000.PV'] + coke_df['20WK5001.PV']
-        coke_df.rename(columns={'20WK5002.PV':'calciner_2'}, inplace=True)
-        coke_df['tstamp'] = pd.to_datetime(coke_df['1h'])
-        coke_df.set_index('tstamp', inplace=True)
-        coke_df = coke_df[['calciner_1', 'calciner_2']]
-        if not (coke_df.dtypes.unique()[0] == 'float64' and 
-                len(coke_df.dtypes.unique()) == 1):
-            coke_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan},
-                                                                    inplace=True)
-        coke_df = coke_df.clip(lower=0)
-        return coke_df    
     
     def parse_annual_flare_fuel(self):
         """Read annual fuel flow data for H2-plant flare, return pd.DataFrame."""
@@ -984,6 +963,34 @@ class MonthlyCoker(AnnualCoker):
 
         return df.loc[self.ts_interval[0]:self.ts_interval[1]]
 
+class AnnualCalciner(AnnualEquipment):
+    """Parse and store annual calciner data."""
+    def __init__(self, annual_equip):
+        """Constructor for parsing annual calciner data."""
+        self.annual_equip = annual_equip
+        self.fpath_coke   = annual_equip.fpath_coke
+
+        self.coke_annual    = self.parse_annual_coke()
+                             # df: hourly coke data for all calciners
+
+    def parse_annual_coke(self):
+        """Read annual coke data for calciners, return pd.DataFrame."""
+        coke_df = pd.read_excel(self.fpath_coke, skiprows=[0,1], header=[0,1])
+        coke_df.columns = coke_df.columns.droplevel(1)
+        coke_df.columns.name = 'unit_key'
+        
+        # sum hearths 1 and 2, rename, reindex
+        coke_df['calciner_1'] = coke_df['20WK5000.PV'] + coke_df['20WK5001.PV']
+        coke_df.rename(columns={'20WK5002.PV':'calciner_2'}, inplace=True)
+        coke_df['tstamp'] = pd.to_datetime(coke_df['1h'])
+        coke_df.set_index('tstamp', inplace=True)
+        coke_df = coke_df[['calciner_1', 'calciner_2']]
+        if not (coke_df.dtypes.unique()[0] == 'float64' and 
+                len(coke_df.dtypes.unique()) == 1):
+            coke_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan},
+                                                                    inplace=True)
+        coke_df = coke_df.clip(lower=0)
+        return coke_df
 ##============================================================================##
 
 # print timestamp for checking import timing
