@@ -740,13 +740,6 @@ class AnnualEquipment(object):
         month_coke = pd.DataFrame(month_coke)
         month_coke.columns = ['coke_tons']
         return month_coke
-
-    def get_monthly_flare_fuel(self):
-        """Return pd.DataFrame of flare fuel for specified month."""
-        fuel_df = self.flarefuel_annual.loc[
-                            self.ts_interval[0]:
-                            self.ts_interval[1]]
-        return fuel_df
     
     def get_monthly_fuel(self):
         """Return pd.DataFrame of emis unit fuel usage for specified month."""
@@ -789,7 +782,7 @@ class AnnualEquipment(object):
                             self.unit_key])
             fuel_df = rfg_fuel_ser.to_frame('fuel_rfg')
             fuel_df['fuel_ng'] = 0
-        return fuel_df 
+        return fuel_df
 
 class AnnualHB(AnnualEquipment):
     """Parse and store annual heater/boiler data."""
@@ -1095,7 +1088,135 @@ class AnnualFlare(AnnualEquipment):
         """Constructor for parsing annual flare data."""
         self.annual_equip = annual_equip
 
+class MonthlyFlare(AnnualFlare):
+    """Calculate monthly flare emissions."""
+    def __init__(self,
+             unit_key,
+             month,
+             annual_eu):
+        """Constructor for individual emis unit calculations."""
+        self.month          = month
+        self.unit_key       = unit_key
+        self.annual_eu      = annual_eu
+        self.annual_equip   = annual_eu.annual_equip
+        
+        self.ts_interval    = self.annual_equip.ts_intervals[self.month
+                                                - self.annual_equip.month_offset]
+        self.col_name_order = self.annual_equip.col_name_order
+        
+        self.flareEFs       = self.annual_equip.flareEFs
+        
+        self.flare_monthly  = ff.get_monthly_lab_results(self.annual_equip.flare_annual,
+                                                         self.ts_interval)
+        self.HHV_flare      = ff.calculate_monthly_HHV(self.flare_monthly)
+        self.f_factor_flare = ff.calculate_monthly_f_factor(self.flare_monthly,
+                                                            self.annual_equip.fpath_FG_chem,
+                                                            self.ts_interval)
+        self.flarefuel_annual = self.annual_equip.flarefuel_annual
+        
+        self.monthly_emis   = self.calculate_monthly_flare_emissions()
+    
+    def calculate_monthly_flare_emissions(self):
+        """Return pd.Series of flare emissions for specified month."""
+        """
+        LOGIC FOR CALCULATING FLARE EMISSIONS
+        [possible scenarios]
+            unit down --> no emissions calculated
+            routine   --> use normal EFs
+            SSM       --> use flare EFs
 
+        if valve > 0:
+            var = discharge_to_flare
+        else:
+            var = 0
+        
+        if valve == 100 or valve < -4:
+            scenario = 'unit down' (no flow or emis calcs for this hour)
+        else:
+            if var = 0 :
+                scenario == 'Routine'
+            else:
+                scenario == 'SSM'
+        
+        [calculation]
+        multiply flare_header_flow by appropriate EF
+        """
+        fuel = self.get_monthly_flare_fuel()
+        
+        # create intermediate column
+        fuel.loc[:,'var'] = 0
+
+        fuel.loc[ (fuel['valve'] > 0), 'var'] = fuel['discharge_to_flare']
+        
+        #     # create column to assign scenarios
+        #     fuel.loc[:,'op_scenario'] = 'unassigned'
+        
+        # if not 'unit down' and valve > 0: scenario = 'ssm'
+        fuel.loc[:, 'op_scenario'] = 'ssm'
+        
+        # if not 'unit down' and valve <= 0: scenario = 'routine'
+        fuel.loc[ (fuel['var'] == 0), 'op_scenario'] = 'routine'
+        
+        # if valve == 100 or valve < -4: scenario = 'unit down'
+        fuel.loc[ (fuel['valve'] < -4)
+              | (fuel['valve'] == 100), 'op_scenario'] = 'unit down'
+        
+        # make sure that only the three scenarios are represented
+        if len(fuel.op_scenario.unique()) > 3:
+            scenarios = '  '.join(str(x)
+                                  for x
+                                  in list(fuel.op_scenario.unique()))
+            raise ValueError('more than 3 scenarios listed: '+scenarios)
+
+        # divide into scenarios
+        flare_off_fuel = fuel[fuel['op_scenario'] == 'routine']
+        flare_on_fuel  = fuel[fuel['op_scenario'] == 'ssm']
+        
+        # get monthly summed fuel values
+        sum_flare_off_fuel = flare_off_fuel['flare_header_flow'].sum()
+        sum_flare_on_fuel = flare_on_fuel['flare_header_flow'].sum()
+        
+        # get EF data
+        efs = self.get_monthly_flare_EFs()
+        
+        # calculate emissions for intervals of pilot light and active flaring
+        efs.loc[:,'emis'] = 0
+        efs.loc[~efs['flare_on'], 'emis'] = (efs['ef'] * efs['conv_mult']
+                                                       * sum_flare_off_fuel)
+        efs.loc[efs['flare_on'], 'emis']  = (efs['ef'] * efs['conv_mult']
+                                                       * sum_flare_on_fuel)
+        
+        emis = efs.groupby(['pollutant'])['emis'].sum()
+        
+        emis['equipment'] = self.unit_key
+        emis['month']     = self.month
+        emis['fuel_ng']   = sum_flare_off_fuel
+        emis['fuel_rfg']  = sum_flare_on_fuel
+        emis['pm25']      = -9999*2000/12 # temporarily hardcoded, as flag
+        emis['pm10']      = -9999*2000/12
+        emis['h2so4']     = 0
+        
+        emis = emis.reindex(self.col_name_order)
+        emis.loc[self.col_name_order[4:-1]] = emis.loc[
+                                self.col_name_order[4:-1]] / 2000 # lbs --> tons
+        return emis
+    
+    def get_monthly_flare_EFs(self):
+        """Return pd.DataFrame of flare EFs for specified month."""
+        ef_df = self.flareEFs
+        # set conversion multiplier to convert units not in mscf
+        ef_df['conv_mult'] = 1
+        ef_df.loc[ef_df.units == 'lb/mmbtu', 'conv_mult'] = (1/1000
+                                                             * self.HHV_flare)
+        ef_df.loc[ef_df.units == 'lb/mmscf', 'conv_mult'] = 1/1000
+        return ef_df
+
+    def get_monthly_flare_fuel(self):
+        """Return pd.DataFrame of flare fuel for specified month."""
+        fuel_df = self.flarefuel_annual.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1]]
+        return fuel_df
 
 ##============================================================================##
 
