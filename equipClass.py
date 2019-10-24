@@ -1081,6 +1081,13 @@ class MonthlyCalciner(AnnualCalciner):
         self.coke_annual    = self.annual_eu.coke_annual
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
 
+class AnnualFlare(AnnualEquipment):
+    """Parse and store annual flare data."""
+    def __init__(self, annual_equip):
+        """Constructor for parsing annual flare data."""
+        self.annual_equip = annual_equip
+
+
 ##============================================================================##
 
 # print timestamp for checking import timing
