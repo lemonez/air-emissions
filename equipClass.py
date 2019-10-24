@@ -145,8 +145,6 @@ class AnnualEquipment(object):
                              # df: hourly fuel data for all equipment
         self.flarefuel_annual = self.parse_annual_flare_fuel()
                              # df: hourly flare-gas data
-        self.h2stack_annual = self.parse_annual_h2stack()
-                             # df: hourly coke data for all calciners
         self.flareEFs       = self.parse_annual_flare_EFs()
                              # df: EFs for flare gas
         #self.toxicsEFs      = self.parse_annual_toxics_EFs()
@@ -292,18 +290,6 @@ class AnnualEquipment(object):
         # the following returns SettingWithCopyWarning; can't figure out how to fix
         flare_EFs.loc[:,'ef'] = pd.to_numeric(flare_EFs.loc[:,'ef'])
         return flare_EFs
-    
-    def parse_annual_h2stack(self):
-        """Read annual stack-flow data for H2 plant, return pd.DataFrame."""
-        stack = pd.read_excel(self.fpath_h2stack, skiprows=2)
-        stack['tstamp'] = pd.to_datetime(stack['1 h'])
-        stack.set_index('tstamp', inplace=True)
-        stack['dscfh'] = stack['46FY38B.PV'] * 1000 # convert to dscfh
-        stack = pd.DataFrame(stack['dscfh'])
-        stack['dscfh'] = pd.to_numeric(stack.loc[:,'dscfh'], errors='coerce')
-        
-        stack = stack.clip(lower=0)
-        return stack
     
     def parse_annual_flare_fuel(self):
         """Read annual fuel flow data for H2-plant flare, return pd.DataFrame."""
@@ -1124,7 +1110,7 @@ class MonthlyFlare(AnnualFlare):
             unit down --> no emissions calculated
             routine   --> use normal EFs
             SSM       --> use flare EFs
-
+        
         if valve > 0:
             var = discharge_to_flare
         else:
@@ -1145,7 +1131,7 @@ class MonthlyFlare(AnnualFlare):
         
         # create intermediate column
         fuel.loc[:,'var'] = 0
-
+        
         fuel.loc[ (fuel['valve'] > 0), 'var'] = fuel['discharge_to_flare']
         
         #     # create column to assign scenarios
@@ -1167,7 +1153,7 @@ class MonthlyFlare(AnnualFlare):
                                   for x
                                   in list(fuel.op_scenario.unique()))
             raise ValueError('more than 3 scenarios listed: '+scenarios)
-
+        
         # divide into scenarios
         flare_off_fuel = fuel[fuel['op_scenario'] == 'routine']
         flare_on_fuel  = fuel[fuel['op_scenario'] == 'ssm']
@@ -1210,7 +1196,7 @@ class MonthlyFlare(AnnualFlare):
                                                              * self.HHV_flare)
         ef_df.loc[ef_df.units == 'lb/mmscf', 'conv_mult'] = 1/1000
         return ef_df
-
+    
     def get_monthly_flare_fuel(self):
         """Return pd.DataFrame of flare fuel for specified month."""
         fuel_df = self.flarefuel_annual.loc[
@@ -1223,6 +1209,22 @@ class AnnualH2Plant(AnnualEquipment):
     def __init__(self, annual_equip):
         """Constructor for parsing annual calciner data."""
         self.annual_equip = annual_equip
+        
+        self.fpath_h2stack = self.annual_equip.fpath_h2stack
+        self.h2stack_annual = self.parse_annual_h2stack()
+                             # df: hourly stack data for H2 plant
+                             
+    def parse_annual_h2stack(self):
+        """Read annual stack-flow data for H2 plant, return pd.DataFrame."""
+        stack = pd.read_excel(self.fpath_h2stack, skiprows=2)
+        stack['tstamp'] = pd.to_datetime(stack['1 h'])
+        stack.set_index('tstamp', inplace=True)
+        stack['dscfh'] = stack['46FY38B.PV'] * 1000 # convert to dscfh
+        stack = pd.DataFrame(stack['dscfh'])
+        stack['dscfh'] = pd.to_numeric(stack.loc[:,'dscfh'], errors='coerce')
+        stack = stack.clip(lower=0)
+        return stack
+
 ##============================================================================##
 
 # print timestamp for checking import timing
