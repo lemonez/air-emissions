@@ -641,7 +641,14 @@ class AnnualEquipment(object):
         return pd.concat([self.get_monthly_fuel(),
                           self.get_monthly_CEMS()],
                           axis=1)
-
+    
+    def get_monthly_h2stack(self):
+        """Return pd.DataFrame of emis unit stack flow for specified month."""
+        month_stack = (self.h2stack_annual.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1]])
+        return month_stack
+    
     def calculate_calciner_total_stack_flow(self, df1):
         """Return pd.DataFrame of calciner emissions."""
         """
@@ -1224,6 +1231,33 @@ class AnnualH2Plant(AnnualEquipment):
         stack['dscfh'] = pd.to_numeric(stack.loc[:,'dscfh'], errors='coerce')
         stack = stack.clip(lower=0)
         return stack
+
+class MonthlyH2Plant(AnnualH2Plant):
+    """Calculate monthly H2 plant emissions."""
+    def __init__(self,
+             unit_key,
+             month,
+             annual_eu):
+        """Constructor for individual emission unit calculations."""
+        self.month          = month
+        self.unit_key       = unit_key
+        self.annual_eu      = annual_eu
+        self.annual_equip   = annual_eu.annual_equip
+        
+        self.ts_interval    = self.annual_equip.ts_intervals[self.month
+                                                - self.annual_equip.month_offset]
+        
+        self.EFunits        = self.annual_equip.EFs[self.month][1]
+        self.equip_EF       = self.annual_equip.EFs[self.month][2]
+        self.col_name_order = self.annual_equip.col_name_order
+        self.equip_ptags    = self.annual_equip.equip_ptags
+        self.ptags_pols     = self.annual_equip.ptags_pols
+        
+        self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
+        self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)        
+        
+        self.h2stack_annual = self.annual_eu.h2stack_annual
+        self.monthly_emis   = self.calculate_monthly_equip_emissions()
 
 ##============================================================================##
 
