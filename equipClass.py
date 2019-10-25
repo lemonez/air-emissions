@@ -806,13 +806,13 @@ class MonthlyHB(AnnualHB):
         
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
 
-class AnnualCoker(AnnualEquipment):
+class AnnualCokerOLD(AnnualEquipment):
     """Parse and store annual coker data."""
     def __init__(self, annual_equip):
         """Constructor for parsing annual coker data."""
         self.annual_equip = annual_equip
 
-class MonthlyCoker(AnnualCoker):
+class MonthlyCokerOLD(AnnualCoker):
     """Calculate monthly coker emissions."""
     def __init__(self,
              unit_key,
