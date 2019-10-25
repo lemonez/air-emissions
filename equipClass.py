@@ -38,12 +38,11 @@ class AnnualEquipment(object):
         self.ts_intervals   = self.generate_ts_interval_list()
                              # list of tuples: [monthly intervals (start, end)]
         
-        # formatting
+        # formatting list: col order for emissions summaries
         self.col_name_order = ['equipment', 'month', 'fuel_rfg', 'fuel_ng',
                                'nox', 'co', 'so2', 'voc',
                                'pm', 'pm25', 'pm10', 'h2so4']
-                             # list: col order for emissions summaries
-
+        
         # directories
         self.data_prefix    = cf.data_dir               # all input data files
         self.annual_prefix  = self.data_prefix+'annual/'# data that changes monthly/annually
@@ -54,32 +53,22 @@ class AnnualEquipment(object):
         self.fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
         self.fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
         self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
-        self.fname_analyses = str(self.year)+'_analyses_agg.xlsx'       # all gas lab-test data
-        #self.fname_RFG      = str(self.year)+'_analyses_RFG.xlsx'   # RFG-sample lab-test data
-        #self.fname_NG       = str(self.year)+'_analyses_NG.xlsx'    # NG-sample lab-test data
-        #self.fname_CVTG     = str(self.year)+'_analyses_CVTG.xlsx'  # CVTG-sample lab-test data
-        #self.fname_flare    = str(self.year)+'_analyses_flare.xlsx' # flare-gas sample lab-test data
-        #self.fname_cokerFG  = str(self.year)+'_analyses_cokerFG.xlsx' # coker-gas sample lab-test data
+        self.fname_analyses = str(self.year)+'_analyses_agg.xlsx'   # all gas lab-test data
         self.fname_ewcoker  = str(self.year)+'_data_EWcoker.xlsx'   # coker CEMS, fuel, flow data
         self.fname_fuel     = str(self.year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
         self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
         self.fname_flarefuel= str(self.year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
         self.fname_h2stack  = str(self.year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
-        self.fname_flareEFs = str(self.year)+'_EFs_flare_DUMMY.xlsx'      # EFs for H2 flare
+        self.fname_flareEFs = str(self.year)+'_EFs_flare_DUMMY.xlsx'# EFs for H2 flare
         self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
         self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
         self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
-
+        
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
         self.fpath_NG_chem  = self.static_prefix+self.fname_NG_chem
         self.fpath_FG_chem  = self.static_prefix+self.fname_FG_chem
         self.fpath_analyses = self.annual_prefix+self.fname_analyses
-        #self.fpath_RFG      = self.annual_prefix+self.fname_RFG
-        #self.fpath_NG       = self.annual_prefix+self.fname_NG
-        #self.fpath_flare    = self.annual_prefix+self.fname_flare
-        #self.fpath_CVTG     = self.annual_prefix+self.fname_CVTG
-        #self.fpath_cokerFG  = self.annual_prefix+self.fname_cokerFG
         self.fpath_ewcoker  = self.annual_prefix+self.fname_ewcoker
         self.fpath_fuel     = self.annual_prefix+self.fname_fuel
         self.fpath_coke     = self.annual_prefix+self.fname_coke
@@ -92,28 +81,22 @@ class AnnualEquipment(object):
         self.fpath_EFs      = self.annual_prefix+self.fname_EFs
         
         # fuel analysis tabs
-        self.labtab_NG       = '#2H2FdNatGas 2019'
-        self.labtab_RFG      = 'RFG 2019'
-        self.labtab_cokerFG  = 'Coker FG 2019'
-        self.labtab_CVTG     = 'CVTG 2019'
-        self.labtab_flare    = '#2H2 Flare 2019'
+        self.labtab_NG       = '#2H2FdNatGas 2019'  # NG-sample lab-test data
+        self.labtab_RFG      = 'RFG 2019'           # RFG-sample lab-test data
+        self.labtab_cokerFG  = 'Coker FG 2019'      # cokerFG-sample lab-test data
+        self.labtab_CVTG     = 'CVTG 2019'          # CVTG-sample lab-test data
+        self.labtab_flare    = '#2H2 Flare 2019'    # flare-gas sample lab-test data
         
-        # equipment mapping (indented descriptions follow assignments)
-        self.equip          = self.parse_equip_map()
-                             # df: all equipment/PItag data
-        self.equip_ptags    = self.generate_equip_ptag_dict()
-                             # dict: {equipment: [PItag, PItag, ...]}
-        self.ptags_pols     = self.generate_ptag_pol_dict()
-                             # dict: {PItag: [pollutant, pollutant, ...]}
-        self.unitID_equip   = self.generate_unitID_unitkey_dict()
-                             # dict: {WED Pt: Python GUID}
-        self.ordered_equip  = self.generate_ordered_equip_list()
-                             # list: [Python GUIDs ordered ascending by WED Pt]
-        self.unitkey_name   = self.generate_unitkey_unitname_dict()
-                             # dict: {Python GUID: pretty name for output}
+        # equipment mapping containers
+        self.equip          = self.parse_equip_map()                # df: all equipment/PItag data
+        self.equip_ptags    = self.generate_equip_ptag_dict()       # dict: {equipment: [PItag, PItag, ...]}
+        self.ptags_pols     = self.generate_ptag_pol_dict()         # dict: {PItag: [pollutant, pollutant, ...]}
+        self.unitID_equip   = self.generate_unitID_unitkey_dict()   # dict: {WED Pt: Python GUID}
+        self.ordered_equip  = self.generate_ordered_equip_list()    # list: [Python GUIDs ordered ascending by WED Pt]
+        self.unitkey_name   = self.generate_unitkey_unitname_dict() # dict: {Python GUID: pretty name for output}
                              
         self.parse_annual_facility_data()
-
+    
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 #++DATA-PARSING METHODS CALLED BY self.parse_annual_facility_data()++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
@@ -417,7 +400,7 @@ class AnnualEquipment(object):
         cems_df['tstamp'] = pd.to_datetime(cems_df['tstamp'])
         print('    parsed CEMS data in: '+path)
         return cems_df
-
+    
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 #++EQUIPMENT-MAPPING METHODS CALLED BY self.__init__()+++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
@@ -522,7 +505,7 @@ class AnnualEquipment(object):
             interval = (ts_start, ts_end) # interval = pd.date_range(start=ts_start, end=ts_end, freq='H')
             intervals.append(interval)
         return intervals
-
+    
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 #++EMISSIONS-CALCULATION METHODS CALLED/SHARED BY MONTHLY CHILD CLASSES++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
@@ -681,7 +664,7 @@ class AnnualEquipment(object):
         if (self.EFunits.loc[self.unit_key]
                         .loc[pol].loc['units'] == 'lb/mmbtu'):
             if self.unit_key in ['coker_1', 'coker_2']:
-                multiplier = 1/1000 * self.HHV_coker
+                multiplier = 1/1000 * self.HHV_cokerFG
             elif self.unit_key == 'crude_vtg':
                 multiplier = 1/1000 * self.HHV_CVTG
             else:
@@ -790,7 +773,6 @@ class MonthlyHB(AnnualHB):
              month,
              annual_eu):
         """Constructor for individual emission unit calculations."""
-                # instance attributes passed as args
         self.unit_key       = unit_key
         self.month          = month
         self.annual_eu      = annual_eu # aka Annual{equiptype}()
@@ -826,6 +808,41 @@ class MonthlyHB(AnnualHB):
 
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data."""
+    def __init__(self, annual_equip):
+        """Constructor for parsing annual coker data."""
+        self.annual_equip = annual_equip
+
+class MonthlyCoker(AnnualCoker):
+    """Calculate monthly coker emissions."""
+    def __init__(self,
+             unit_key,
+             month,
+             annual_eu):
+        """Constructor for individual emis unit calculations."""
+        self.month          = month
+        self.unit_key       = unit_key
+        self.annual_eu      = annual_eu
+        self.annual_equip   = annual_eu.annual_equip
+        
+        self.ts_interval    = self.annual_equip.ts_intervals[self.month
+                                                - self.annual_equip.month_offset]
+#         self.EFs            = self.annual_equip.EFs[self.month][0]
+        self.EFunits        = self.annual_equip.EFs[self.month][1]
+        self.equip_EF       = self.annual_equip.EFs[self.month][2]
+        self.col_name_order = self.annual_equip.col_name_order
+        self.equip_ptags    = self.annual_equip.equip_ptags
+#         self.ptags_pols     = self.annual_equip.ptags_pols
+
+        self.cokerFG_monthly = ff.get_monthly_lab_results(
+                                            self.annual_equip.cokerFG_annual,
+                                            self.ts_interval)
+ 
+        self.HHV_cokerFG    = ff.calculate_monthly_HHV(self.cokerFG_monthly)  
+        
+        self.monthly_emis   = self.calculate_monthly_equip_emissions()    
+    
+class AnnualCoker_CO2(AnnualEquipment):
+    """Parse and store annual coker data for CO2 calculations."""
     def __init__(self, annual_equip):
         """Constructor for parsing annual coker data."""
         self.annual_equip = annual_equip
@@ -905,8 +922,8 @@ class AnnualCoker(AnnualEquipment):
         dat.set_index('tstamp', inplace=True)
         return dat
 
-class MonthlyCoker(AnnualCoker):
-    """Calculate monthly coker emissions."""
+class MonthlyCoker_CO2(AnnualCoker_CO2):
+    """Calculate monthly coker CO2 emissions."""
 # replace 'rfg_mscfh' with 'fuel_rfg' once units are figured out
     col_name_order = ['equipment', 'month',
                       'cokerfg_mscfh', 'pilot_mscfh', 'co2']
@@ -950,7 +967,6 @@ class MonthlyCoker(AnnualCoker):
     
     def calculate_monthly_equip_emissions(self):
         """Return monthly emissions as pd.Series."""
-        
         hourly = self.calculate_monthly_co2_emissions()
         monthly = hourly.sum()
         monthly.loc['equipment'] = self.unit_key
