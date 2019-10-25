@@ -26,16 +26,19 @@ def main():
             print('    {:<22}: {}'.format(k,v))
         print('\n')
 
+    cf.verify_pollutants_to_calc(cf.pollutants_to_calculate)
+
     # ensure output directories exist
     for dir in [cf.out_dir, cf.out_dir_child, cf.log_dir]:
         if not os.path.exists(dir):
             os.makedirs(dir)
             print('Created directory \''+dir+'\' for output files.\n')
-
+    
+    
     if cf.view_config:
         import sys
         sys.exit(0)
-
+    
     # print start timestamp for checking script runtime
     start_time_seconds = time.time()
     start_time = time.strftime("%H:%M:%S")
@@ -104,8 +107,8 @@ def get_args():
 
     group2 = parser.add_argument_group('Data / Cloud Options')
     group2.add_argument('-e', '--equip',
-                        dest='equips_to_calculate', metavar='Equips',
-                        default=cf.equips_to_calculate,
+                        dest='equip_to_calculate', metavar='Equips',
+                        default=cf.equip_to_calculate,
                         help='Equipment units to calculate (default: %(default)s).')
     group2.add_argument('-y', '--year',
                         dest='data_year', metavar='DataYear',

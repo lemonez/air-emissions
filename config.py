@@ -13,15 +13,30 @@ data_dir      = './data/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'dev'
+out_dir_child = 'dev_criteria'
 
 first_month_to_calculate = 1
-last_month_to_calculate  = 9
+last_month_to_calculate  = 2
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
 
-equip_to_calculate = ['coker_e', 'coker_w']
+equip_to_calculate = ['boiler_4', 'calciner_1', 'coker_1', 'h_furnace_n',
+                      'h2_plant_2', 'h2_flare']
+#equip_to_calculate = ['coker_e', 'coker_w']
+
+pollutants_to_calculate = [
+                           # criteria
+                           'NOx',
+                           'CO',
+                           'SO2',
+                           'VOC',
+                           'PM', 'PM25', 'PM10',
+                           'H2SO4',
+                           # GHG
+                           'CO2'
+                           ]
+
 we_are_calculating_toxics = False
 calciner_toxics = False
 calculate_PM_fractions = False
@@ -98,3 +113,12 @@ equip_types = {
         'boiler_6'       : 'heaterboiler',
         'boiler_7'       : 'heaterboiler'
         }
+
+def verify_pollutants_to_calc(pol_list):
+    """Ensure only criteria or GHG pollutants are being calculated, not both."""
+    import sys
+    
+    if 'CO2' in pol_list and len(pol_list) > 1:
+        print('Cannot calculate GHG (CO2) and criteria emissions at the same time.')
+        print('Change pollutant selection in config file.')
+        sys.exit()

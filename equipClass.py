@@ -812,7 +812,7 @@ class AnnualCoker(AnnualEquipment):
         """Constructor for parsing annual coker data."""
         self.annual_equip = annual_equip
 
-class MonthlyCoker(...
+#class MonthlyCoker(...
 
 class AnnualCokerOLD(AnnualEquipment):
     """Parse and store annual coker data for pre-2019 cokers."""

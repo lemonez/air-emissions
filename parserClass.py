@@ -47,125 +47,26 @@ class AnnualParser(object):
         if self.is_toxics:
             self.toxics_text = ' toxics '
 
-        self.ordered_equip_to_calculate = annual_equip.ordered_equip
+        self.ordered_equip = self.annual_equip.ordered_equip
     
     def read_and_write_all(self):
         """Parse all data, calculate all emissions, write all CSVs."""
-        a = self.aggregate_all_to_annual()
-        f = self.format_annual_outnames(a)
-        self.groupby_and_write_annual(f)
-    
-    def aggregate_all_to_annual(self):
-        """Return pd.DataFrame of annual emissions from listed equipment."""
-        print('Calculating emissions for equipment and months specified...')
-        for unit_key in self.ordered_equip_to_calculate:
-            each_equip_ser = []
-            # instantiate annual equip_type class instances
-            annual_hb       = equipClass.AnnualHB(self.annual_equip)
-            annual_coker_old = equipClass.AnnualCokerOLD(self.annual_equip)
-            # annual_coker    = equipClass.AnnualCoker(self.annual_equip)
-            annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
-            annual_flare    = equipClass.AnnualFlare(self.annual_equip)
-            annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
-            for month in self.months_to_calc:
-                if self.verbose_logging:
-                    print('\tCalculating month {:2d}{}emissions for {}...'
-                                .format(month, self.toxics_text,
-                                        self.annual_equip.unitkey_name[unit_key]))
-                if not self.is_toxics:
-                    # eu_type --> 'flare' , 'calciner', etc.
-                    eu_type = self.equip_types[unit_key]
-                    if eu_type == 'heaterboiler':
-                        emis = (equipClass
-                                .MonthlyHB(unit_key, month, annual_hb)
-                                .calculate_monthly_equip_emissions())
-                    if eu_type == 'coker_old':
-                        emis = (equipClass
-                                .MonthlyCokerOLD(equip, month, annual_coker_old)
-                                .calculate_monthly_equip_emissions())
-                    if eu_type == 'coker_new':
-                        emis = (equipClass
-                                .MonthlyCoker(equip, month, annual_coker)
-                                .calculate_monthly_equip_emissions())
-                    if eu_type == 'calciner':
-                        emis = (equipClass
-                                .MonthlyCalciner(equip, month, annual_calciner)
-                                .calculate_monthly_equip_emissions())
-                    if eu_type == 'flare':
-                        emis = (equipClass
-                                .MonthlyFlare(equip, month, annual_flare)
-                                .calculate_monthly_flare_emissions())
-                    if eu_type == 'h2plant':
-                        emis = (equipClass
-                                .MonthlyH2Plant(equip, month, annual_h2plant)
-                                .calculate_monthly_equip_emissions())
-                #else:
-                    # see original equipclass.py script...
-                each_equip_ser.append(emis)
-            all_months = pd.concat(each_equip_ser, axis=1)
-            self.all_equip_dict[equip] = all_months
-        
-        # transpose and concatenate DataFrames
-        annual_dfs = []
-        for v in self.all_equip_dict.values():
-            v.index.name = None
-            annual_dfs.append(v.T)
-        annual = pd.concat(annual_dfs)
-        
-        # convert type "object" to type "float"
-        annual[annual.columns[2:]] = annual[annual.columns[2:]].astype(float)
-        return annual
-    
-    def format_annual_outnames(self, annual_df):
-        """Format labels of annual emissions pd.DataFrame for CSV output."""
-        print('Formatting emissions data.')
-        # change month integers to abbreviated names if specified
-        if self.write_month_names:
-            annual_df['month'] = annual_df['month'].astype(str)
-            annual_df.replace({'month': self.month_map}, inplace=True)
-        
-        # change equipment names and column headers to readable output names
-        annual_df['WED Pt'] = annual_df['equipment'].replace(
-                                            dict((v,k)
-                                            for k,v
-                                            in self.annual_equip
-                                               .unitID_equip.items()))
-        # column names for final output
-        output_colnames = {
-                'month'        : 'Month',
-                'equipment'    : 'Equipment',
-                'cokerfg_mscfh': 'Coker Fuel Gas',
-                'pilot_mscfh'  : 'Pilot Natural Gas',
-                'fuel_rfg'     : 'Refinery Fuel Gas',
-                'fuel_ng'      : 'Natural Gas',
-                'coke_tons'    : 'Calcined Coke',
-                'nox'          : 'NOx',
-                'co'           : 'CO',
-                'so2'          : 'SO2',
-                'voc'          : 'VOC', 
-                'pm'           : 'PM',
-                'pm25'         : 'PM25',
-                'pm10'         : 'PM10',
-                'h2so4'        : 'H2SO4',
-                'co2'          : 'CO2'
-                }
-        col_order = ['WED Pt', 'Equipment', 'Month',
-                     'Coker Fuel Gas', 'Pilot Natural Gas', 'CO2']
-        annual_df = (annual_df.replace({'equipment': self.annual_equip
-                                                     .unitkey_name})
-                              .rename(columns=output_colnames))
-        annual_df = annual_df[col_order]
-        return annual_df
-        
-    def groupby_and_write_annual(self, annual_df):
-        """Aggregate data in multiple schemes, write CSVs."""
+        self.groupby_and_write_annual()
 
+    def groupby_and_write_annual(self):
+        """Aggregate data in multiple schemes, write CSVs."""
+        annual_df = self.format_annual_outnames()
         print('Slicing and dicing emissions data for output.')
         
         # create MultiIndex for renaming columns
         if not self.is_toxics:
-            arr_col = [['Coker Fuel Gas', 'Pilot Natural Gas', 'CO2'],
-                       (['mscf'] * 2) + (['tons'] * 1)]
+            arr_col = [['Refinery Fuel Gas', 'Natural Gas',
+                        'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4'],
+                       (['mscf'] * 2) + (['tons'] * 7) + (['lbs'] * 1)]
+
+            if False: # replace with 'if calculating CO2' statement
+                arr_col = [['Coker Fuel Gas', 'Pilot Natural Gas', 'CO2'],
+                           (['mscf'] * 2) + (['tons'] * 1)]
 #        else:
 #            if not self.is_calciner_toxics:
 #                arr_col = [['Refinery Fuel Gas', 'Natural Gas'] + cf.toxics_with_EFs,
@@ -267,3 +168,124 @@ class AnnualParser(object):
         
         if self.return_dfs: # DEBUG
             return frames
+    
+    def format_annual_outnames(self):
+        """Format labels of annual emissions pd.DataFrame for CSV output."""
+        print('Formatting emissions data.')
+        annual_df = self.aggregate_all_to_annual()
+        # change month integers to abbreviated names if specified
+        if self.write_month_names:
+            annual_df['month'] = annual_df['month'].astype(str)
+            annual_df.replace({'month': self.month_map}, inplace=True)
+        
+        # change equipment names and column headers to readable output names
+        annual_df['WED Pt'] = annual_df['equipment'].replace(
+                                            dict((v,k)
+                                            for k,v
+                                            in self.annual_equip
+                                                   .unitID_equip.items()))
+        # column names for final output
+        output_colnames_map = {
+                'month'        : 'Month',
+                'equipment'    : 'Equipment',
+                'cokerfg_mscfh': 'Coker Fuel Gas',
+                'pilot_mscfh'  : 'Pilot Natural Gas',
+                'fuel_rfg'     : 'Refinery Fuel Gas',
+                'fuel_ng'      : 'Natural Gas',
+                'coke_tons'    : 'Calcined Coke',
+                'nox'          : 'NOx',
+                'co'           : 'CO',
+                'so2'          : 'SO2',
+                'voc'          : 'VOC', 
+                'pm'           : 'PM',
+                'pm25'         : 'PM25',
+                'pm10'         : 'PM10',
+                'h2so4'        : 'H2SO4',
+                'co2'          : 'CO2'
+                }
+
+        col_order = ['WED Pt', 'Equipment', 'Month']
+        if not self.is_toxics:
+            col_order += ['Refinery Fuel Gas', 'Natural Gas']
+            col_order += ['NOx', 'CO', 'SO2', 'VOC',
+                          'PM', 'PM25', 'PM10', 'H2SO4']
+        if False: # replace with 'if calculating CO2' statement
+            col_order = ['WED Pt', 'Equipment', 'Month',
+                         'Coker Fuel Gas', 'Pilot Natural Gas', 'CO2']
+
+        annual_df = (annual_df.replace({'equipment': self.annual_equip
+                                                         .unitkey_name})
+                              .rename(columns=output_colnames_map))
+        annual_df = annual_df[col_order]
+        
+### add functionality here to subset by certain pollutants based on cf.pollutants_to_calculate
+#    subset = cf.pollutants_to_calculate
+    
+
+###        
+        
+        return annual_df
+
+    def aggregate_all_to_annual(self):
+        """Return pd.DataFrame of annual emissions from listed equipment."""
+        print('Calculating emissions for equipment and months specified...')
+        ordered_equip_to_calculate = [equip for equip
+                                            in self.ordered_equip
+                                            if equip in cf.equip_to_calculate]
+        for unit_key in ordered_equip_to_calculate:
+            each_equip_ser  = []
+            # instantiate annual equip_type class instances
+            annual_hb       = equipClass.AnnualHB(self.annual_equip)
+            annual_coker_old= equipClass.AnnualCokerOLD(self.annual_equip)
+            # annual_coker    = equipClass.AnnualCoker(self.annual_equip)
+            annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
+            annual_flare    = equipClass.AnnualFlare(self.annual_equip)
+            annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
+            for month in self.months_to_calc:
+                if self.verbose_logging:
+                    print('\tCalculating month {:2d}{}emissions for {}...'
+                                .format(month, self.toxics_text,
+                                        self.annual_equip.unitkey_name[unit_key]))
+                if not self.is_toxics:
+                    # eu_type --> 'flare' , 'calciner', etc.
+                    eu_type = self.equip_types[unit_key]
+                    if eu_type == 'heaterboiler':
+                        emis = (equipClass
+                                .MonthlyHB(unit_key, month, annual_hb)
+                                .calculate_monthly_equip_emissions())
+                    if eu_type == 'coker_old':
+                        emis = (equipClass
+                                .MonthlyCokerOLD(unit_key, month, annual_coker_old)
+                                .calculate_monthly_equip_emissions())
+                    if eu_type == 'coker_new':
+                        emis = (equipClass
+                                .MonthlyCoker(unit_key, month, annual_coker)
+                                .calculate_monthly_equip_emissions())
+                    if eu_type == 'calciner':
+                        emis = (equipClass
+                                .MonthlyCalciner(unit_key, month, annual_calciner)
+                                .calculate_monthly_equip_emissions())
+                    if eu_type == 'flare':
+                        emis = (equipClass
+                                .MonthlyFlare(unit_key, month, annual_flare)
+                                .calculate_monthly_flare_emissions())
+                    if eu_type == 'h2plant':
+                        emis = (equipClass
+                                .MonthlyH2Plant(unit_key, month, annual_h2plant)
+                                .calculate_monthly_equip_emissions())
+                #else:
+                    # see original equipclass.py script...
+                each_equip_ser.append(emis)
+            all_months = pd.concat(each_equip_ser, axis=1)
+            self.all_equip_dict[unit_key] = all_months
+        
+        # transpose and concatenate DataFrames
+        annual_dfs = []
+        for v in self.all_equip_dict.values():
+            v.index.name = None
+            annual_dfs.append(v.T)
+        annual = pd.concat(annual_dfs)
+        
+        # convert type "object" to type "float"
+        annual[annual.columns[2:]] = annual[annual.columns[2:]].astype(float)
+        return annual
