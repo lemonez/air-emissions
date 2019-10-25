@@ -61,12 +61,13 @@ class AnnualParser(object):
         for unit_key in self.ordered_equip_to_calculate:
             each_equip_ser = []
             # instantiate annual equip_type class instances
-#TODO       some function to limit instantiating classes that will not be used
-            annual_coker    = equipClass.AnnualCoker(self.annual_equip)
-            annual_coker_old= equipClass.AnnualCokerOLD(self.annual_equip)
+#TODO       some function to determine which classes actually get instantiated
             annual_hb       = equipClass.AnnualHB(self.annual_equip)
-            #annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
-            #annual_flare    = equipClass.AnnualFlare(self.annual_equip)
+            annual_coker_old = equipClass.AnnualCokerOLD(self.annual_equip)
+            # annual_coker    = equipClass.AnnualCoker(self.annual_equip)
+            annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
+            annual_flare    = equipClass.AnnualFlare(self.annual_equip)
+            annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
             for month in self.months_to_calc:
                 if self.verbose_logging:
                     print('\tCalculating month {:2d}{}emissions for {}...'
@@ -79,13 +80,13 @@ class AnnualParser(object):
                         emis = (equipClass
                                 .MonthlyHB(unit_key, month, annual_hb)
                                 .calculate_monthly_equip_emissions())
-                    if eu_type == 'coker_new':
-                        emis = (equipClass
-                                .MonthlyCoker(equip, month, annual_coker)
-                                .calculate_monthly_equip_emissions())
                     if eu_type == 'coker_old':
                         emis = (equipClass
                                 .MonthlyCokerOLD(equip, month, annual_coker_old)
+                                .calculate_monthly_equip_emissions())
+                    if eu_type == 'coker_new':
+                        emis = (equipClass
+                                .MonthlyCoker(equip, month, annual_coker)
                                 .calculate_monthly_equip_emissions())
                     if eu_type == 'calciner':
                         emis = (equipClass
@@ -94,6 +95,10 @@ class AnnualParser(object):
                     if eu_type == 'flare':
                         emis = (equipClass
                                 .MonthlyFlare(equip, month, annual_flare)
+                                .calculate_monthly_flare_emissions())
+                    if eu_type == 'h2plant':
+                        emis = (equipClass
+                                .MonthlyH2Plant(equip, month, annual_h2plant)
                                 .calculate_monthly_equip_emissions())
                 #else:
                     # see original equipclass.py script...
