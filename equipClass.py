@@ -806,14 +806,22 @@ class MonthlyHB(AnnualHB):
         
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
 
+class AnnualCoker(AnnualEquipment):
+    """Parse and store annual coker data for new (2019+) cokers."""
+    def __init__(self, annual_equip):
+        """Constructor for parsing annual coker data."""
+        self.annual_equip = annual_equip
+
+class MonthlyCoker(...
+
 class AnnualCokerOLD(AnnualEquipment):
-    """Parse and store annual coker data."""
+    """Parse and store annual coker data for pre-2019 cokers."""
     def __init__(self, annual_equip):
         """Constructor for parsing annual coker data."""
         self.annual_equip = annual_equip
 
 class MonthlyCokerOLD(AnnualCoker):
-    """Calculate monthly coker emissions."""
+    """Calculate monthly coker emissions for pre-2019 cokers."""
     def __init__(self,
              unit_key,
              month,
