@@ -61,7 +61,6 @@ class AnnualParser(object):
         for unit_key in self.ordered_equip_to_calculate:
             each_equip_ser = []
             # instantiate annual equip_type class instances
-#TODO       some function to determine which classes actually get instantiated
             annual_hb       = equipClass.AnnualHB(self.annual_equip)
             annual_coker_old = equipClass.AnnualCokerOLD(self.annual_equip)
             # annual_coker    = equipClass.AnnualCoker(self.annual_equip)
