@@ -16,7 +16,7 @@ log_suffix    = ''
 out_dir_child = 'dev_criteria'
 
 first_month_to_calculate = 1
-last_month_to_calculate  = 2
+last_month_to_calculate  = 9
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
