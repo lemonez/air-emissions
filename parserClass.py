@@ -16,7 +16,7 @@ class AnnualParser(object):
     """
     # output options
     write_csvs=True
-    return_dfs=False
+    return_dfs=True
     
     def __init__(self, annual_equip):
         """Constructor for handling inputs, calculations, and outputs."""
@@ -33,6 +33,8 @@ class AnnualParser(object):
         self.months_to_calc     = cf.months_to_calculate
         self.equip_types        = cf.equip_types
         self.equip_to_calc      = cf.equip_to_calculate
+        self.pollutants_to_calc = cf.pollutants_to_calculate
+        self.pollutants_all     = cf.pollutants_all
     #    h2s_equips_to_calc     = cf.h2s_equips_to_calc
     #    EFs_to_check           = cf.EFs_to_check
         self.is_toxics          = cf.we_are_calculating_toxics
@@ -57,12 +59,31 @@ class AnnualParser(object):
         """Aggregate data in multiple schemes, write CSVs."""
         annual_df = self.format_annual_outnames()
         print('Slicing and dicing emissions data for output.')
-        
+
+
+        drop_pollutants = [pol for pol in self.pollutants_all
+                               if pol not in self.pollutants_to_calc
+                               and pol in annual_df.columns]
+        for pol in drop_pollutants:
+            annual_df.drop(columns=pol, inplace=True)
+#TODO: refactor to create MultiIndex from existing columns, not based on config file; less error-prone
         # create MultiIndex for renaming columns
         if not self.is_toxics:
-            arr_col = [['Refinery Fuel Gas', 'Natural Gas',
-                        'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4'],
-                       (['mscf'] * 2) + (['tons'] * 7) + (['lbs'] * 1)]
+            arr_col_lev0 = ['Refinery Fuel Gas', 'Natural Gas']
+            arr_col_lev1 = ['mscf'] * 2
+            print(self.pollutants_to_calc)
+            for pol in cf.pollutants_to_calculate:
+                if pol in ['NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'CO2']:
+                    arr_col_lev0 += [pol]
+                    arr_col_lev1 += ['tons']
+                elif pol in ['H2SO4']:
+                    arr_col_lev0 += [pol]
+                    arr_col_lev1 += ['lbs']            
+            arr_col = [arr_col_lev0, arr_col_lev1]
+            print(arr_col)
+                #arr_col = [['Refinery Fuel Gas', 'Natural Gas',
+                #            'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4'],
+                #           (['mscf'] * 2) + (['tons'] * 7) + (['lbs'] * 1)]
 
             if False: # replace with 'if calculating CO2' statement
                 arr_col = [['Coker Fuel Gas', 'Pilot Natural Gas', 'CO2'],
@@ -75,6 +96,7 @@ class AnnualParser(object):
 #                arr_col = [['Calcined Coke'] + cf.calciner_toxics_with_EFs,
 #                           (['tons'] * 1) + (['lbs'] * len(cf.calciner_toxics_with_EFs))]
 #        
+
         MI_col = pd.MultiIndex.from_arrays(arr_col, names=('Parameter', 'Units'))
             # df.index.names = (['Quarter', 'Equipment']) ; q_gb.head()
             # not sure if the tuple is necessary, can just pass a list
@@ -171,8 +193,8 @@ class AnnualParser(object):
     
     def format_annual_outnames(self):
         """Format labels of annual emissions pd.DataFrame for CSV output."""
-        print('Formatting emissions data.')
         annual_df = self.aggregate_all_to_annual()
+        print('Formatting emissions data.')
         # change month integers to abbreviated names if specified
         if self.write_month_names:
             annual_df['month'] = annual_df['month'].astype(str)
@@ -184,25 +206,6 @@ class AnnualParser(object):
                                             for k,v
                                             in self.annual_equip
                                                    .unitID_equip.items()))
-        # column names for final output
-        output_colnames_map = {
-                'month'        : 'Month',
-                'equipment'    : 'Equipment',
-                'cokerfg_mscfh': 'Coker Fuel Gas',
-                'pilot_mscfh'  : 'Pilot Natural Gas',
-                'fuel_rfg'     : 'Refinery Fuel Gas',
-                'fuel_ng'      : 'Natural Gas',
-                'coke_tons'    : 'Calcined Coke',
-                'nox'          : 'NOx',
-                'co'           : 'CO',
-                'so2'          : 'SO2',
-                'voc'          : 'VOC', 
-                'pm'           : 'PM',
-                'pm25'         : 'PM25',
-                'pm10'         : 'PM10',
-                'h2so4'        : 'H2SO4',
-                'co2'          : 'CO2'
-                }
 
         col_order = ['WED Pt', 'Equipment', 'Month']
         if not self.is_toxics:
@@ -215,15 +218,8 @@ class AnnualParser(object):
 
         annual_df = (annual_df.replace({'equipment': self.annual_equip
                                                          .unitkey_name})
-                              .rename(columns=output_colnames_map))
+                              .rename(columns=cf.output_colnames_map))
         annual_df = annual_df[col_order]
-        
-### add functionality here to subset by certain pollutants based on cf.pollutants_to_calculate
-#    subset = cf.pollutants_to_calculate
-    
-
-###        
-        
         return annual_df
 
     def aggregate_all_to_annual(self):
