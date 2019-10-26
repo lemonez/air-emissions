@@ -54,7 +54,7 @@ class AnnualEquipment(object):
         self.fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
         self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
         self.fname_analyses = str(self.year)+'_analyses_agg.xlsx'   # all gas lab-test data
-        self.fname_ewcoker  = str(self.year)+'_data_EWcoker.xlsx'   # coker CEMS, fuel, flow data
+        self.fname_ewcoker  = str(self.year)+'_data_EWcoker_Q3.xlsx'   # coker CEMS, fuel, flow data
         self.fname_fuel     = str(self.year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
         self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
         self.fname_flarefuel= str(self.year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
@@ -107,8 +107,10 @@ class AnnualEquipment(object):
         print('began parsing annual data at '+start_time)
 
         # CEMS, fuel analysis and usage, EFs (indented descriptions follow assignments)
+        print('  parsing CEMS data')
         self.CEMS_annual    = self.parse_all_monthly_CEMS()
                              # df: annual CEMS data
+        print('  parsing lab analysis data')
         self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_analyses,
                                                              self.labtab_NG)
                              # df: annual NG lab-test results
@@ -124,10 +126,14 @@ class AnnualEquipment(object):
         self.flare_annual   = ff.parse_annual_FG_lab_results(self.fpath_analyses,
                                                              self.labtab_flare)
                              # df: annual flare-gas lab-test results
+        print('    parsed lab analysis data')
+        print('  parsing fuel data')
         self.fuel_annual    = self.parse_annual_fuel()
                              # df: hourly fuel data for all equipment
         self.flarefuel_annual = self.parse_annual_flare_fuel()
                              # df: hourly flare-gas data
+        print('    parsed fuel data')
+        print('  parsing emission factor data')
         self.flareEFs       = self.parse_annual_flare_EFs()
                              # df: EFs for flare gas
         #self.toxicsEFs      = self.parse_annual_toxics_EFs()
@@ -136,6 +142,7 @@ class AnnualEquipment(object):
         #                     # df: EFs for calciner toxics
         self.EFs            = self.parse_annual_EFs()
                              # dict: {integer month: (EFs df, EFunits df, equip_EF_dict)}
+        print('    parsed emission factor data')
         
         end_time_seconds = time.time()
         end_time = time.strftime("%H:%M:%S")
@@ -447,9 +454,12 @@ class AnnualEquipment(object):
     def generate_equip_ptag_dict(self):
         """Return dictionary of equipment ({unit_key: [PItags_list]})"""
         
-        equip_df = self.equip
+        equip_df = self.parse_equip_map()
         # subset to exclude H2S and others
-        sub = (equip_df[equip_df['param'].isin(['nox', 'so2', 'co', 'o2'])]
+        sub = (equip_df[equip_df['param'].isin(['nox', 'so2', 'co', 'o2',
+                                                'so2_lo', 'so2_hi',
+                                                #'co2'
+                                                ])]
                                              .loc[:,['ptag','unit_key']]
                                              .dropna(subset=['ptag'])
                                              .set_index('unit_key'))
@@ -480,7 +490,11 @@ class AnnualEquipment(object):
         equip_info = pd.read_csv(self.fpath_eqmap).rename(columns=col_map)
         equip_info['param'] = equip_info['param'].str.strip().str.lower()
         equip_info['units'] = equip_info['units'].str.strip().str.lower()
-        equip_info.replace({'dry o2': 'o2'}, inplace=True)
+        equip_info.replace({'dry o2': 'o2',
+                            'lo so2': 'so2_lo',
+                            'hi so2': 'so2_hi'
+                           }, inplace=True)
+        
                 # equip_info.loc[equip_info['ptag'] == '46AI601.PV', 'param'] = 'o2' # change 'dry o2' to 'o2' for H2 Plant
         equip_info['param_units'] = equip_info['param']+'_'+equip_info['units']
                 # .set_index(['unit_key', 'ptag'])
@@ -794,11 +808,10 @@ class MonthlyHB(AnnualHB):
         self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
         self.HHV_CVTG       = ff.calculate_monthly_HHV(self.CVTG_monthly)
         # fuel f-factors (floats) calculated using static chem data
-# TODO: figure out error produced from this next line -- '8000' is dummy data
-        self.f_factor_RFG   = 8000#ff.calculate_monthly_f_factor(
-                                  #          self.RFG_monthly,
-                                  #          self.annual_equip.fpath_FG_chem,
-                                  #          self.ts_interval)
+        self.f_factor_RFG   = ff.calculate_monthly_f_factor(
+                                            self.RFG_monthly,
+                                            self.annual_equip.fpath_FG_chem,
+                                            self.ts_interval)
         self.f_factor_CVTG  = ff.calculate_monthly_f_factor(
                                             self.CVTG_monthly,
                                             self.annual_equip.fpath_FG_chem,
@@ -811,8 +824,107 @@ class AnnualCoker(AnnualEquipment):
     def __init__(self, annual_equip):
         """Constructor for parsing annual coker data."""
         self.annual_equip = annual_equip
+        
+        self.coker_dat_tup = self.get_annual_dat_newcoker()
 
-#class MonthlyCoker(...
+    def get_annual_dat_newcoker(self):
+        coker_dat_tup = AnnualCoker_CO2(self.annual_equip
+                                                    ).unmerge_annual_ewcoker()
+        return coker_dat_tup
+
+class MonthlyCoker(AnnualCoker):
+    """Calculate monthly coker emissions for new (2019+) cokers."""
+    def __init__(self,
+             unit_key,
+             month,
+             annual_eu):
+        """Constructor for individual emis unit calculations."""
+        self.month          = month
+        self.unit_key       = unit_key
+        self.annual_eu      = annual_eu
+        self.annual_equip   = annual_eu.annual_equip
+        
+        self.ts_interval    = self.annual_equip.ts_intervals[self.month
+                                                - self.annual_equip.month_offset]
+
+#         self.EFs            = self.annual_equip.EFs[self.month][0]
+        self.EFunits        = self.annual_equip.EFs[self.month][1]
+        self.equip_EF       = self.annual_equip.EFs[self.month][2]
+        self.col_name_order = self.annual_equip.col_name_order
+        self.equip_ptags    = self.annual_equip.equip_ptags
+        self.ptags_pols     = self.annual_equip.ptags_pols
+
+        # gas-sample lab results (DataFrames)
+        self.NG_monthly     = ff.get_monthly_lab_results(
+                                            self.annual_equip.NG_annual,
+                                            self.ts_interval)
+        self.cokerFG_monthly = ff.get_monthly_lab_results(
+                                            self.annual_equip.cokerFG_annual,
+                                            self.ts_interval)
+        
+        # fuel higher heating values (floats)
+        self.HHV_NG         = ff.calculate_monthly_HHV(self.NG_monthly)
+        self.HHV_cokerFG    = ff.calculate_monthly_HHV(self.cokerFG_monthly)
+        
+        # fuel f-factors (floats) calculated using static chem data
+        self.f_factor_NG    = ff.calculate_monthly_f_factor(
+                                            self.NG_monthly,
+                                            self.annual_equip.fpath_NG_chem,
+                                            self.ts_interval)
+        self.f_factor_cokerFG = ff.calculate_monthly_f_factor(
+                                            self.cokerFG_monthly,
+                                            self.annual_equip.fpath_FG_chem,
+                                            self.ts_interval)
+        if self.unit_key == 'coker_e':
+            self.coker_dat = self.annual_eu.coker_dat_tup[0]
+        if self.unit_key == 'coker_w':
+            self.coker_dat = self.annual_eu.coker_dat_tup[1]
+            
+        self.merged = self.merge_fuel_and_CEMS_newcoker()
+#        self.monthly_emis   = self.calculate_monthly_equip_emissions()
+
+#TODO: move these to annual level
+    # - will need to deal with the fact that we don't have yearly data for both datasets
+    def merge_fuel_and_CEMS_newcoker(self):
+        monthly_CEMS = self.get_monthly_CEMS_newcoker()
+        monthly_fuel = self.get_monthly_fuel_newcoker()
+        idx = monthly_CEMS.index
+        merged = pd.merge(monthly_CEMS, self, how='left')
+        merged.index = idx
+        return merged
+
+    def get_monthly_fuel_newcoker(self):
+        annual_dat = self.coker_dat
+        monthly_dat = annual_dat.loc[
+                                self.ts_interval[0]:
+                                self.ts_interval[1]]
+        return monthly_dat
+
+    def get_monthly_CEMS_newcoker(self):
+        """Return pd.DataFrame of emis unit CEMS data for specified month."""
+        CEMS_annual = self.annual_equip.CEMS_annual.copy()
+        if True:#self.unit_key in self.equip_ptags.keys():
+            ptags_list = self.equip_ptags['coker_e']#self.unit_key]
+            # subset PItags of interest
+            sub = CEMS_annual[CEMS_annual['ptag'].isin(ptags_list)]
+            sub.reset_index(inplace=True)
+            sub_pivot = (sub.pivot(index='tstamp',
+                                   columns="ptag",
+                                   values="val")
+                            .rename(columns=self.ptags_pols))
+
+            # replace 'lo so2' value with 'hi so2' value if 'hi so2' not null
+            mask = sub_pivot['so2_lo_ppm'].isna() & sub_pivot['so2_hi_ppm'].notna()
+            sub_pivot['so2_ppm'] = sub_pivot['so2_lo_ppm']
+            sub_pivot.loc[mask, 'so2_ppm'] = sub_pivot.loc[mask, 'so2_hi_ppm']
+            sub_pivot.drop(columns=['so2_lo_ppm', 'so2_hi_ppm'], inplace=True)
+            sub2_pivot = sub_pivot.loc[
+                            self.ts_interval[0]:
+                            self.ts_interval[1]]
+            return sub2_pivot
+        else: # empty df if no CEMS
+            no_CEMS = pd.DataFrame({'no_CEMS_data' : []})
+            return no_CEMS
 
 class AnnualCokerOLD(AnnualEquipment):
     """Parse and store annual coker data for pre-2019 cokers."""
@@ -1090,11 +1202,10 @@ class MonthlyCalciner(AnnualCalciner):
                                             self.ts_interval)
         # fuel higher heating values (float)
         self.HHV_RFG        = ff.calculate_monthly_HHV(self.RFG_monthly)
-# TODO: figure out error produced from this next line -- '8000' is dummy data
-        self.f_factor_RFG   = 8000#ff.calculate_monthly_f_factor(
-                                  #          self.RFG_monthly,
-                                  #          self.annual_equip.fpath_FG_chem,
-                                  #          self.ts_interval)
+        self.f_factor_RFG   = ff.calculate_monthly_f_factor(
+                                            self.RFG_monthly,
+                                            self.annual_equip.fpath_FG_chem,
+                                            self.ts_interval)
 
         self.coke_annual    = self.annual_eu.coke_annual
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
