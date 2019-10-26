@@ -21,8 +21,14 @@ last_month_to_calculate  = 2
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
 
-equip_to_calculate = ['boiler_4', 'calciner_1', 'coker_1', 'h_furnace_n',
-                      'h2_plant_2', 'h2_flare']
+equip_to_calculate = [
+                        'boiler_4',
+                        'calciner_1',
+                        # 'coker_1',
+                        # 'h_furnace_n',
+                        # 'h2_plant_2',
+                        # 'h2_flare'
+                      ]
 #equip_to_calculate = ['coker_e', 'coker_w']
 
 pollutants_to_calculate = [
@@ -34,7 +40,7 @@ pollutants_to_calculate = [
                            'PM', 'PM25', 'PM10',
                            'H2SO4',
                            # GHG
-                           'CO2'
+#                           'CO2'
                            ]
 
 we_are_calculating_toxics = False
@@ -78,6 +84,15 @@ def generate_month_map():
 
 if write_month_names:
     month_map = generate_month_map()
+
+def verify_pollutants_to_calc(pol_list):
+    """Ensure only criteria or GHG pollutants are being calculated, not both."""
+    import sys
+    
+    if 'CO2' in pol_list and len(pol_list) > 1:
+        print('Cannot calculate GHG (CO2) and criteria emissions at the same time.')
+        print('Change pollutant selection in config file.')
+        sys.exit()
     
 equip_types = {
         'coker_1'        : 'coker_old'   ,
@@ -114,11 +129,29 @@ equip_types = {
         'boiler_7'       : 'heaterboiler'
         }
 
-def verify_pollutants_to_calc(pol_list):
-    """Ensure only criteria or GHG pollutants are being calculated, not both."""
-    import sys
-    
-    if 'CO2' in pol_list and len(pol_list) > 1:
-        print('Cannot calculate GHG (CO2) and criteria emissions at the same time.')
-        print('Change pollutant selection in config file.')
-        sys.exit()
+# column names for final output
+output_colnames_map = {
+                'month'        : 'Month',
+                'equipment'    : 'Equipment',
+                'cokerfg_mscfh': 'Coker Fuel Gas',
+                'pilot_mscfh'  : 'Pilot Natural Gas',
+                'fuel_rfg'     : 'Refinery Fuel Gas',
+                'fuel_ng'      : 'Natural Gas',
+                'coke_tons'    : 'Calcined Coke',
+                'nox'          : 'NOx',
+                'co'           : 'CO',
+                'so2'          : 'SO2',
+                'voc'          : 'VOC', 
+                'pm'           : 'PM',
+                'pm25'         : 'PM25',
+                'pm10'         : 'PM10',
+                'h2so4'        : 'H2SO4',
+                'co2'          : 'CO2'
+                }
+
+pollutants_all = [
+                    # criteria
+                    'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4',
+                    # GHG
+                    'CO2'
+                ]
