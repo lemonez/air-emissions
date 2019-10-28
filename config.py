@@ -13,21 +13,45 @@ data_dir      = './data/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'dev_criteria'
+out_dir_child = 'dev_criteria_3to5'
 
-first_month_to_calculate = 1
-last_month_to_calculate  = 9
+first_month_to_calculate = 3
+last_month_to_calculate  = 5
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
 
 equip_to_calculate = [
-                        'boiler_4',
+                        'crude_vtg',
+                        'crude_rfg',
+                        'n_vac',
+                        's_vac',
+                        'ref_heater_1',
+                        'ref_heater_2',
+                        'naptha_heater',
+                        'naptha_reboiler',
+                        'dhds_heater_3',
+                        'hcr_1',
+                        'hcr_2',
+                        'rxn_r_1',
+                        'rxn_r_4',
+                        'coker_1',
+                        'coker_2',
+                        'coker_e',
+                        'coker_w',
+                        'h2_plant_2',
+                        'dhds_heater_1',
+                        'dhds_reboiler_1',
+                        'dhds_heater_2',
+                        'h_furnace_n',
+                        'h_furnace_s',
                         'calciner_1',
-                        # 'coker_1',
-                        # 'h_furnace_n',
-                        # 'h2_plant_2',
-                        # 'h2_flare'
+                        'calciner_2',
+                        'boiler_4',
+                        'boiler_5',
+                        'boiler_6',
+                        'boiler_7',
+                        'h2_flare',
                       ]
 #equip_to_calculate = ['coker_e', 'coker_w']
 
