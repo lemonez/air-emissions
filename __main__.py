@@ -23,7 +23,19 @@ def main():
     if cf.verbose_logging or cf.view_config:
         print('\nConfiguration options specified:\n')
         for k,v in args_dict.items():
-            print('    {:<22}: {}'.format(k,v))
+            if k == 'months_to_calculate':
+                mos = []
+                for mo in args_dict['months_to_calculate']:
+                    mos.append(str(mo))
+                mo_start = cf.month_map.get(mos[0])
+                mo_end   = cf.month_map.get(mos[-1])
+                print('    {:<22}: {} to {}'.format(k, mo_start, mo_end))
+            elif k == 'equip_to_calculate':
+                print('    {:<22}: {}'.format(k, args_dict[k][0]))
+                for eq in args_dict[k][1:]:
+                    print('    {:<22}: {}'.format('', eq))
+            else:
+                print('    {:<22}: {}'.format(k,v))
         print('\n')
 
     cf.verify_pollutants_to_calc(cf.pollutants_to_calculate)
