@@ -71,7 +71,6 @@ class AnnualParser(object):
         if not self.is_toxics:
             arr_col_lev0 = ['Refinery Fuel Gas', 'Natural Gas']
             arr_col_lev1 = ['mscf'] * 2
-            print(self.pollutants_to_calc)
             for pol in cf.pollutants_to_calculate:
                 if pol in ['NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'CO2']:
                     arr_col_lev0 += [pol]
@@ -80,7 +79,6 @@ class AnnualParser(object):
                     arr_col_lev0 += [pol]
                     arr_col_lev1 += ['lbs']            
             arr_col = [arr_col_lev0, arr_col_lev1]
-            print(arr_col)
                 #arr_col = [['Refinery Fuel Gas', 'Natural Gas',
                 #            'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4'],
                 #           (['mscf'] * 2) + (['tons'] * 7) + (['lbs'] * 1)]
