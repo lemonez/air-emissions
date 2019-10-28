@@ -13,10 +13,10 @@ data_dir      = './data/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'so2'
+out_dir_child = 'so2_r2'
 
 first_month_to_calculate = 1
-last_month_to_calculate  = 9
+last_month_to_calculate  = 1
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
@@ -47,6 +47,7 @@ equip_to_calculate = [
                         'h_furnace_s',
                         'calciner_1',
                         'calciner_2',
+                        'iht_heater',
                         'boiler_4',
                         'boiler_5',
                         'boiler_6',
@@ -147,6 +148,7 @@ equip_types = {
         'dhds_heater_2'  : 'heaterboiler',
         'h_furnace_n'    : 'heaterboiler',
         'h_furnace_s'    : 'heaterboiler',
+        'iht_heater'     : 'heaterboiler',
         'boiler_4'       : 'heaterboiler',
         'boiler_5'       : 'heaterboiler',
         'boiler_6'       : 'heaterboiler',
