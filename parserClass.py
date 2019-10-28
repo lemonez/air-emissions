@@ -231,7 +231,7 @@ class AnnualParser(object):
             # instantiate annual equip_type class instances
             annual_hb       = equipClass.AnnualHB(self.annual_equip)
             annual_coker_old= equipClass.AnnualCokerOLD(self.annual_equip)
-            # annual_coker    = equipClass.AnnualCoker(self.annual_equip)
+            annual_coker    = equipClass.AnnualCoker(self.annual_equip)
             annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
             annual_flare    = equipClass.AnnualFlare(self.annual_equip)
             annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
@@ -254,7 +254,7 @@ class AnnualParser(object):
                     if eu_type == 'coker_new':
                         emis = (equipClass
                                 .MonthlyCoker(unit_key, month, annual_coker)
-                                .calculate_monthly_equip_emissions())
+                                .calculate_monthly_equip_emissions_newcoker())
                     if eu_type == 'calciner':
                         emis = (equipClass
                                 .MonthlyCalciner(unit_key, month, annual_calciner)
