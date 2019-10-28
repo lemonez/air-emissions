@@ -588,7 +588,7 @@ class AnnualEquipment(object):
 # end temporary workaround
         
         return monthly
-    
+ #TODO: refactor into 'convert_from_ppm' and 'convert_from_mscfh' methods   
     def convert_from_ppm(self):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
         both_df = self.merge_fuel_and_CEMS()
@@ -880,25 +880,92 @@ class MonthlyCoker(AnnualCoker):
         if self.unit_key == 'coker_w':
             self.coker_dat = self.annual_eu.coker_dat_tup[1]
             
-        self.merged = self.merge_fuel_and_CEMS_newcoker()
+#       self.merged = self.merge_fuel_and_CEMS_newcoker()
 #        self.monthly_emis   = self.calculate_monthly_equip_emissions()
+
+    def calculate_monthly_equip_emissions_newcoker(self):
+        """Return pd.Series of equipment unit emissions for specified month."""
+        hourly = self.convert_from_ppm_newcoker()
+        monthly = hourly.sum()
+
+        monthly.rename(index={'cokerfg_dscfh': 'fuel_rfg', 'pilot_dscfh': 'fuel_ng'}, inplace=True)
+        # set other values in series to 0 for now (only calc'ing SO2)
+        monthly.loc['voc'] = 0
+        monthly.loc['pm'] = 0
+        monthly.loc['pm25'] = 0
+        monthly.loc['pm10'] = 0
+        monthly.loc['h2so4'] = 0 # monthly.loc['so2'] * 0.026
+        monthly.loc['equipment'] = self.unit_key
+        monthly.loc['month'] = self.month
+        monthly = monthly.reindex(self.col_name_order)
+        monthly.loc[self.col_name_order[4:-1]] = monthly.loc[
+                                self.col_name_order[4:-1]] / 2000 # lbs --> tons
+        return monthly
+        
+    def convert_from_ppm_newcoker(self):
+        """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
+        both_df = self.merge_fuel_and_CEMS_newcoker()
+        if both_df.shape[0] == 0:
+            return both_df
+        else:       
+            ppm_conv_facts = {
+                                #       MW      const   hr/min
+                                'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
+                                'co' : (28   * 1.557E-7 / 60), # 7.277e-08
+                                'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
+                              }
+            ptags_list = self.equip_ptags[self.unit_key]
+            cems_pol_list = [self.ptags_pols[tag] for tag in ptags_list
+                             if self.ptags_pols[tag]
+                                 not in ['o2_%', 'so2_lo_ppm', 'so2_hi_ppm']]
+            cems_pol_list += ['so2_ppm']
+            for pol in cems_pol_list:
+                both_df[pol.split('_')[0]] = (
+                                        both_df[pol]
+                                        * ppm_conv_facts[pol.split('_')[0]]
+                                        * both_df['dscfh'])
+            return both_df
+
 
 #TODO: move these to annual level
     # - will need to deal with the fact that we don't have yearly data for both datasets
+        
     def merge_fuel_and_CEMS_newcoker(self):
+        """Merge fuel and CEMS data, return pd.DataFrame."""
         monthly_CEMS = self.get_monthly_CEMS_newcoker()
         monthly_fuel = self.get_monthly_fuel_newcoker()
-        idx = monthly_CEMS.index
-        merged = pd.merge(monthly_CEMS, self, how='left')
-        merged.index = idx
-        return merged
 
+        if monthly_CEMS.sum().sum() == 0:
+            # make a dummy DataFrame with same index for merging
+            monthly_CEMS = pd.DataFrame(index=monthly_fuel.index)
+            for col in ['o2_%', 'nox_ppm', 'co_ppm', 'so2_ppm']:
+                monthly_CEMS[col] = pd.np.nan
+        monthly_fuel.drop(columns='o2_%', inplace=True) # so that column not duplicated when merged
+        merged = pd.merge(monthly_CEMS, monthly_fuel, left_index=True, right_index=True)
+        
+        merged['cokerfg_dscfh'] = (merged['cokerfg_mscfh']
+                            * 1000 
+                            * self.HHV_cokerFG
+                            * 1/1000000
+                            * self.f_factor_cokerFG
+                            * 20.9 / (20.9 - merged['o2_%']))
+
+        merged['pilot_dscfh'] = (merged['pilot_mscfh']
+                            * 1000 
+                            * self.HHV_NG
+                            * 1/1000000
+                            * self.f_factor_NG
+                            * 20.9 / (20.9 - merged['o2_%']))
+
+        merged['dscfh'] = merged['cokerfg_dscfh'] + merged['pilot_dscfh']
+        return merged
+    
     def get_monthly_fuel_newcoker(self):
         annual_dat = self.coker_dat
         monthly_dat = annual_dat.loc[
                                 self.ts_interval[0]:
                                 self.ts_interval[1]]
-        return monthly_dat
+        return monthly_dat.copy()
 
     def get_monthly_CEMS_newcoker(self):
         """Return pd.DataFrame of emis unit CEMS data for specified month."""
