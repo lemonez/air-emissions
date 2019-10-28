@@ -880,8 +880,7 @@ class MonthlyCoker(AnnualCoker):
         if self.unit_key == 'coker_w':
             self.coker_dat = self.annual_eu.coker_dat_tup[1]
             
-#       self.merged = self.merge_fuel_and_CEMS_newcoker()
-#        self.monthly_emis   = self.calculate_monthly_equip_emissions()
+        self.monthly_emis   = self.calculate_monthly_equip_emissions_newcoker()
 
     def calculate_monthly_equip_emissions_newcoker(self):
         """Return pd.Series of equipment unit emissions for specified month."""
@@ -889,7 +888,8 @@ class MonthlyCoker(AnnualCoker):
         monthly = hourly.sum()
 
         monthly.rename(index={'cokerfg_mscfh': 'fuel_rfg',
-                              'pilot_mscfh': 'fuel_ng'}, inplace=True)
+                              'pilot_mscfh'  : 'fuel_ng'},
+                              inplace=True)
         # set other values in series to 0 for now (only calc'ing SO2)
         monthly.loc['voc'] = 0
         monthly.loc['pm'] = 0

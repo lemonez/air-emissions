@@ -246,27 +246,27 @@ class AnnualParser(object):
                     if eu_type == 'heaterboiler':
                         emis = (equipClass
                                 .MonthlyHB(unit_key, month, annual_hb)
-                                .calculate_monthly_equip_emissions())
-                    if eu_type == 'coker_old':
-                        emis = (equipClass
-                                .MonthlyCokerOLD(unit_key, month, annual_coker_old)
-                                .calculate_monthly_equip_emissions())
+                                .monthly_emis)
                     if eu_type == 'coker_new':
                         emis = (equipClass
                                 .MonthlyCoker(unit_key, month, annual_coker)
-                                .calculate_monthly_equip_emissions_newcoker())
+                                .monthly_emis)
+                    if eu_type == 'coker_old':
+                        emis = (equipClass
+                                .MonthlyCokerOLD(unit_key, month, annual_coker_old)
+                                .monthly_emis)
                     if eu_type == 'calciner':
                         emis = (equipClass
                                 .MonthlyCalciner(unit_key, month, annual_calciner)
-                                .calculate_monthly_equip_emissions())
+                                .monthly_emis)
                     if eu_type == 'flare':
                         emis = (equipClass
                                 .MonthlyFlare(unit_key, month, annual_flare)
-                                .calculate_monthly_flare_emissions())
+                                .monthly_emis)
                     if eu_type == 'h2plant':
                         emis = (equipClass
                                 .MonthlyH2Plant(unit_key, month, annual_h2plant)
-                                .calculate_monthly_equip_emissions())
+                                .monthly_emis)
                 #else:
                     # see original equipclass.py script...
                 each_equip_ser.append(emis)

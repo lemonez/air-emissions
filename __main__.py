@@ -29,7 +29,10 @@ def main():
                     mos.append(str(mo))
                 mo_start = cf.month_map.get(mos[0])
                 mo_end   = cf.month_map.get(mos[-1])
-                print('    {:<22}: {} to {}'.format(k, mo_start, mo_end))
+                if mo_start != mo_end:
+                    print('    {:<22}: {} to {}'.format(k, mo_start, mo_end))
+                else:
+                    print('    {:<22}: {}'.format(k, mo_start))
             elif k == 'equip_to_calculate':
                 print('    {:<22}: {}'.format(k, args_dict[k][0]))
                 for eq in args_dict[k][1:]:

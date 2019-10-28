@@ -13,10 +13,10 @@ data_dir      = './data/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'dev_criteria_3to5'
+out_dir_child = 'so2'
 
-first_month_to_calculate = 3
-last_month_to_calculate  = 5
+first_month_to_calculate = 1
+last_month_to_calculate  = 9
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
@@ -57,12 +57,12 @@ equip_to_calculate = [
 
 pollutants_to_calculate = [
                            # criteria
-                           'NOx',
-                           'CO',
+#                           'NOx',
+#                           'CO',
                            'SO2',
-                           'VOC',
-                           'PM', 'PM25', 'PM10',
-                           'H2SO4',
+#                           'VOC',
+#                           'PM', 'PM25', 'PM10',
+#                           'H2SO4',
                            # GHG
 #                           'CO2'
                            ]
