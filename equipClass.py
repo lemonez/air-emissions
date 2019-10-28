@@ -888,7 +888,8 @@ class MonthlyCoker(AnnualCoker):
         hourly = self.convert_from_ppm_newcoker()
         monthly = hourly.sum()
 
-        monthly.rename(index={'cokerfg_dscfh': 'fuel_rfg', 'pilot_dscfh': 'fuel_ng'}, inplace=True)
+        monthly.rename(index={'cokerfg_mscfh': 'fuel_rfg',
+                              'pilot_mscfh': 'fuel_ng'}, inplace=True)
         # set other values in series to 0 for now (only calc'ing SO2)
         monthly.loc['voc'] = 0
         monthly.loc['pm'] = 0
