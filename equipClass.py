@@ -660,13 +660,16 @@ class AnnualEquipment(object):
         df2 = pd.concat([df1, monthly_coke], axis=1)
         
         if self.unit_key == 'calciner_1':
-            # value from calciner_1 tab in MAR 2018
-            stack_flow = 99522 # dscf / ton coke
-            df2['WESP_flow'] = df2['coke_tons'] * stack_flow
+# TODO: these should not be hardcoded...they change yearly w/ EFs
+            if self.month == 9:
+                stack_flow = 117156 # dscf / ton coke    
+            else:
+                stack_flow = 98055 # dscf / ton coke
+        df2['WESP_flow'] = df2['coke_tons'] * stack_flow
+        
         if self.unit_key == 'calciner_2':
-            # values from calciner_2 tab in MAR 2018
             stack_flow = 1823.2 # acfm
-            prod_rate  = 28162  # units?
+            prod_rate  = 28162  # unitless?
             dscf_acf   = 0.669  # dscf per acf conversion factor
             
             # must be multiplied by 60 to convert from /min to /hr
@@ -1242,6 +1245,8 @@ class AnnualCalciner(AnnualEquipment):
                 len(coke_df.dtypes.unique()) == 1):
             coke_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan},
                                                                     inplace=True)
+        # change STPD --> STPH
+        coke_df = coke_df/24                                                                    
         coke_df = coke_df.clip(lower=0)
         return coke_df
         
