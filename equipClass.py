@@ -665,7 +665,7 @@ class AnnualEquipment(object):
                 stack_flow = 117156 # dscf / ton coke    
             else:
                 stack_flow = 98055 # dscf / ton coke
-        df2['WESP_flow'] = df2['coke_tons'] * stack_flow
+            df2['WESP_flow'] = df2['coke_tons'] * stack_flow
         
         if self.unit_key == 'calciner_2':
             stack_flow = 1823.2 # acfm
