@@ -35,7 +35,7 @@ class AnnualEquipment(object):
         self.year           = cf.data_year
         self.months_to_calc = cf.months_to_calculate
         self.month_offset   = cf.month_offset
-        self.ts_intervals   = self.generate_ts_interval_list()
+        self.ts_intervals   = self._generate_ts_interval_list()
                              # list of tuples: [monthly intervals (start, end)]
         
         # formatting list: col order for emissions summaries
@@ -55,7 +55,7 @@ class AnnualEquipment(object):
         self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
         self.fname_analyses = str(self.year)+'_analyses_agg.xlsx'   # all gas lab-test data
         self.fname_ewcoker  = str(self.year)+'_data_EWcoker_Q3.xlsx'   # coker CEMS, fuel, flow data
-        self.fname_fuel     = str(self.year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
+        self.fname_fuel     = str(self.year)+'_usage_fuel_r2.xlsx'     # annual fuel usage for all equipment
         self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
         self.fname_flarefuel= str(self.year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
         self.fname_h2stack  = str(self.year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
@@ -87,20 +87,22 @@ class AnnualEquipment(object):
         self.labtab_CVTG     = 'CVTG 2019'          # CVTG-sample lab-test data
         self.labtab_flare    = '#2H2 Flare 2019'    # flare-gas sample lab-test data
         
+        self.sheet_fuel = '10-19'
+        
         # equipment mapping containers
-        self.equip          = self.parse_equip_map()                # df: all equipment/PItag data
-        self.equip_ptags    = self.generate_equip_ptag_dict()       # dict: {equipment: [PItag, PItag, ...]}
-        self.ptags_pols     = self.generate_ptag_pol_dict()         # dict: {PItag: [pollutant, pollutant, ...]}
-        self.unitID_equip   = self.generate_unitID_unitkey_dict()   # dict: {WED Pt: Python GUID}
-        self.ordered_equip  = self.generate_ordered_equip_list()    # list: [Python GUIDs ordered ascending by WED Pt]
-        self.unitkey_name   = self.generate_unitkey_unitname_dict() # dict: {Python GUID: pretty name for output}
+        self.equip          = self._parse_equip_map()                # df: all equipment/PItag data
+        self.equip_ptags    = self._generate_equip_ptag_dict()       # dict: {equipment: [PItag, PItag, ...]}
+        self.ptags_pols     = self._generate_ptag_pol_dict()         # dict: {PItag: [pollutant, pollutant, ...]}
+        self.unitID_equip   = self._generate_unitID_unitkey_dict()   # dict: {WED Pt: Python GUID}
+        self.ordered_equip  = self._generate_ordered_equip_list()    # list: [Python GUIDs ordered ascending by WED Pt]
+        self.unitkey_name   = self._generate_unitkey_unitname_dict() # dict: {Python GUID: pretty name for output}
                              
-        self.parse_annual_facility_data()
+        self._parse_annual_facility_data()
     
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++DATA-PARSING METHODS CALLED BY self.parse_annual_facility_data()++++++++++++#
+#++DATA-PARSING METHODS CALLED BY self._parse_annual_facility_data()++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-    def parse_annual_facility_data(self):
+    def _parse_annual_facility_data(self):
         """Parse facility-wide annual data."""
         start_time_seconds = time.time()
         start_time = time.strftime("%H:%M:%S")
@@ -108,7 +110,7 @@ class AnnualEquipment(object):
 
         # CEMS, fuel analysis and usage, EFs (indented descriptions follow assignments)
         print('  parsing CEMS data')
-        self.CEMS_annual    = self.parse_all_monthly_CEMS()
+        self.CEMS_annual    = self._parse_all_monthly_CEMS()
                              # df: annual CEMS data
         print('  parsing lab analysis data')
         self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_analyses,
@@ -128,19 +130,19 @@ class AnnualEquipment(object):
                              # df: annual flare-gas lab-test results
         print('    parsed lab analysis data')
         print('  parsing fuel data')
-        self.fuel_annual    = self.parse_annual_fuel()
+        self.fuel_annual    = self._parse_annual_fuel()
                              # df: hourly fuel data for all equipment
-        self.flarefuel_annual = self.parse_annual_flare_fuel()
+        self.flarefuel_annual = self._parse_annual_flare_fuel()
                              # df: hourly flare-gas data
         print('    parsed fuel data')
         print('  parsing emission factor data')
-        self.flareEFs       = self.parse_annual_flare_EFs()
+        self.flareEFs       = self._parse_annual_flare_EFs()
                              # df: EFs for flare gas
         #self.toxicsEFs      = self.parse_annual_toxics_EFs()
         #                     # df: EFs for toxics
         #self.toxicsEFs_calciners = self.parse_annual_calciner_toxics_EFs()
         #                     # df: EFs for calciner toxics
-        self.EFs            = self.parse_annual_EFs()
+        self.EFs            = self._parse_annual_EFs()
                              # dict: {integer month: (EFs df, EFunits df, equip_EF_dict)}
         print('    parsed emission factor data')
         
@@ -150,7 +152,7 @@ class AnnualEquipment(object):
         total_time = round(end_time_seconds - start_time_seconds)
         print('Total init time: '+str(total_time)+' seconds)')
     
-    def parse_annual_EFs(self):
+    def _parse_annual_EFs(self):
         """Parse EF tabs for specified months; return dict of tuples."""
         """
         dict structure: {integer month: (EFs df, EFunits df, equip_EF_dict)}
@@ -158,10 +160,10 @@ class AnnualEquipment(object):
         annual_EF_container = {}
         for month in self.months_to_calc:
             tabname = self.ts_intervals[month-self.month_offset][0].strftime('%Y_%m') # monthly EF excel tab named as 'YYYY_MM'
-            annual_EF_container[month] = self.parse_EF_tab(tabname) # tuple (a, b, c) is saved to dict 
+            annual_EF_container[month] = self._parse_EF_tab(tabname) # tuple (a, b, c) is saved to dict 
         return annual_EF_container
     
-    def parse_EF_tab(self, tab):
+    def _parse_EF_tab(self, tab):
         """Read monthly EF data, return tuple (values df, units df, {equip:[EFs]} dict."""
         """
             *df: value of each EF for each equipment
@@ -258,7 +260,7 @@ class AnnualEquipment(object):
                       inplace=True)
         return toxics
     
-    def parse_annual_flare_EFs(self):
+    def _parse_annual_flare_EFs(self):
         """Read EFs from H2-flare gas data; return pd.DataFrame."""
         # read, clean, format, subset data
         df = pd.read_excel(self.fpath_flareEFs, sheet_name='Summary',
@@ -281,7 +283,7 @@ class AnnualEquipment(object):
         flare_EFs.loc[:,'ef'] = pd.to_numeric(flare_EFs.loc[:,'ef'])
         return flare_EFs
     
-    def parse_annual_flare_fuel(self):
+    def _parse_annual_flare_fuel(self):
         """Read annual fuel flow data for H2-plant flare, return pd.DataFrame."""
         flare_df = pd.read_excel(self.fpath_flarefuel, skiprows=4)
         
@@ -302,13 +304,14 @@ class AnnualEquipment(object):
         flare_df['discharge_to_flare'] = flare_df['discharge_to_flare'].clip(lower=0)
         return flare_df
     
-    def parse_annual_fuel(self):
+    def _parse_annual_fuel(self):
         """Read annual fuel data for all equipment, return pd.DataFrame."""
         """
         df structure: (WED Pt. x Timestamp)
         df size: <2MB storage for year of data
         """
-        fuel = pd.read_excel(self.fpath_fuel, skiprows=9, header=list(range(6)))
+        fuel = pd.read_excel(self.fpath_fuel, sheet_name=self.sheet_fuel,
+                             skiprows=9, header=list(range(6)))
         fuel.columns = fuel.columns.droplevel(5)
         fuel.columns = fuel.columns.droplevel(4)
         fuel.columns = fuel.columns.droplevel(1)
@@ -373,16 +376,16 @@ class AnnualEquipment(object):
         fuel = fuel.clip(lower=0)
         return fuel
     
-    def parse_all_monthly_CEMS(self):
+    def _parse_all_monthly_CEMS(self):
         """Combine monthly CEMS data into annual, return pd.DataFrame."""
         """
         df structure: (WED Pt. x Timestamp)
         """
-        CEMS_paths = self.subset_CEMS_filepaths()
+        CEMS_paths = self._subset_CEMS_filepaths()
         
         monthly_CEMS = []
         for fpath in CEMS_paths:
-            month = self.parse_monthly_CEMS(fpath)
+            month = self._parse_monthly_CEMS(fpath)
             monthly_CEMS.append(month)
         annual_CEMS = (pd.concat(monthly_CEMS)
                          .sort_values(['ptag', 'tstamp'])
@@ -390,7 +393,7 @@ class AnnualEquipment(object):
         annual_CEMS['val'] = annual_CEMS['val'].clip(lower=0)
         return annual_CEMS
     
-    def subset_CEMS_filepaths(self):
+    def _subset_CEMS_filepaths(self):
         """Return list of filepaths to parse based on months specified in config file."""
         CEMS_paths_all = sorted(glob.glob(self.CEMS_dir+'*'))
         months_to_parse = [month for month in cf.months_to_calculate]
@@ -400,7 +403,7 @@ class AnnualEquipment(object):
         return CEMS_paths_parse
     
     @staticmethod
-    def parse_monthly_CEMS(path):
+    def _parse_monthly_CEMS(path):
         """Read one month of hourly CEMS data, return pd.DataFrame."""
         cems_df = pd.read_csv(path, usecols=[1,2,3], header=None)
         cems_df.columns = ['ptag', 'tstamp', 'val']
@@ -411,7 +414,7 @@ class AnnualEquipment(object):
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 #++EQUIPMENT-MAPPING METHODS CALLED BY self.__init__()+++++++++++++++++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-    def generate_unitkey_unitname_dict(self):
+    def _generate_unitkey_unitname_dict(self):
         """Return dict of equipment keys ({unit_key: unit_name})"""
         """
         ex: {'coker_e': 'Coker E Charge Heater',
@@ -423,7 +426,7 @@ class AnnualEquipment(object):
                                  .to_dict())
         return unitkey_unitname_dict
     
-    def generate_ordered_equip_list(self):
+    def _generate_ordered_equip_list(self):
         """Generate list of equipment ordered by WED Pt. for CSV output."""
         dkeys = list(self.unitID_equip.keys())
         equip_list = []
@@ -431,7 +434,7 @@ class AnnualEquipment(object):
             equip_list.append(self.unitID_equip[k])
         return equip_list
     
-    def generate_unitID_unitkey_dict(self):
+    def _generate_unitID_unitkey_dict(self):
         """Return OrderedDict of equipment IDs ({unit_id: unit_key})"""
         """
         ex: OrderedDict([('40_E', 'coker_e'),
@@ -441,7 +444,7 @@ class AnnualEquipment(object):
                                             .to_dict(into=OrderedDict))
         return unitID_unitkey_dict
     
-    def generate_ptag_pol_dict(self):
+    def _generate_ptag_pol_dict(self):
         """Return dictionary of ({PItag : pol_units})."""
         
         # make dictionary of PI tags
@@ -451,10 +454,10 @@ class AnnualEquipment(object):
                           .to_dict())
         return ptag_pols_dict
     
-    def generate_equip_ptag_dict(self):
+    def _generate_equip_ptag_dict(self):
         """Return dictionary of equipment ({unit_key: [PItags_list]})"""
         
-        equip_df = self.parse_equip_map()
+        equip_df = self._parse_equip_map()
         # subset to exclude H2S and others
         sub = (equip_df[equip_df['param'].isin(['nox', 'so2', 'co', 'o2',
                                                 'so2_lo', 'so2_hi',
@@ -476,7 +479,7 @@ class AnnualEquipment(object):
         
         return equip_ptag_dict
     
-    def parse_equip_map(self):
+    def _parse_equip_map(self):
         """Read CSV of equipment information and return pd.DataFrame."""
         col_map = {
             'PI Tag'     : 'ptag',
@@ -504,13 +507,13 @@ class AnnualEquipment(object):
     
     def generate_date_range(self):
         """Generate pd.date_range to fill timestamps."""
-        tsi = self.generate_ts_interval_list()
+        tsi = self._generate_ts_interval_list()
         s_tstamp = tsi[0][0]
         e_tstamp = tsi[len(tsi) - 1][1]
         dr = pd.date_range(start=s_tstamp, end=e_tstamp, freq='H')
         return dr
     
-    def generate_ts_interval_list(self):
+    def _generate_ts_interval_list(self):
         """Return list of monthly datetime tuples (start, end)."""
         intervals = []
         for mo in self.months_to_calc:
