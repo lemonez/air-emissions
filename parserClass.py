@@ -223,18 +223,29 @@ class AnnualParser(object):
     def aggregate_all_to_annual(self):
         """Return pd.DataFrame of annual emissions from listed equipment."""
         print('Calculating emissions for equipment and months specified...')
+
+        if 'heaterboiler' in cf.equip_types_to_calculate:
+            annual_hb       = equipClass.AnnualHB(self.annual_equip)
+            print('instantiated a heaterboiler')
+        if 'coker_old' in cf.equip_types_to_calculate:
+            annual_coker_old= equipClass.AnnualCokerOLD(self.annual_equip)
+        if 'coker_new' in cf.equip_types_to_calculate:
+            annual_coker    = equipClass.AnnualCoker(self.annual_equip)
+        if 'calciner' in cf.equip_types_to_calculate:
+            annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
+            print('instantiated a calciner')
+        if 'flare' in cf.equip_types_to_calculate:
+            annual_flare    = equipClass.AnnualFlare(self.annual_equip)
+            print('instantiated a flare')
+        if 'h2plant' in cf.equip_types_to_calculate:
+            annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
+
         ordered_equip_to_calculate = [equip for equip
                                             in self.ordered_equip
                                             if equip in cf.equip_to_calculate]
         for unit_key in ordered_equip_to_calculate:
             each_equip_ser  = []
             # instantiate annual equip_type class instances
-            annual_hb       = equipClass.AnnualHB(self.annual_equip)
-            annual_coker_old= equipClass.AnnualCokerOLD(self.annual_equip)
-            annual_coker    = equipClass.AnnualCoker(self.annual_equip)
-            annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
-            annual_flare    = equipClass.AnnualFlare(self.annual_equip)
-            annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
             for month in self.months_to_calc:
                 if self.verbose_logging:
                     print('\tCalculating month {:2d}{}emissions for {}...'
