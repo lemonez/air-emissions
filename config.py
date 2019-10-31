@@ -13,48 +13,46 @@ data_dir      = './data/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'so2_r2'
+out_dir_child = 'so2'
 
 first_month_to_calculate = 1
 last_month_to_calculate  = 9
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
-
 equip_to_calculate = [
-                       'crude_vtg',
-                       'crude_rfg',
-                       'n_vac',
-                       's_vac',
-                       'ref_heater_1',
-                       'ref_heater_2',
-                       'naptha_heater',
-                       'naptha_reboiler',
-                       'dhds_heater_3',
-                       'hcr_1',
-                       'hcr_2',
-                       'rxn_r_1',
-                       'rxn_r_4',
-                       'coker_1',
-                       'coker_2',
-                       'coker_e',
-                       'coker_w',
-                       'h2_plant_2',
-                       'dhds_heater_1',
-                       'dhds_reboiler_1',
-                       'dhds_heater_2',
-                       'h_furnace_n',
-                       'h_furnace_s',
-                       'calciner_1',
-                       'calciner_2',
-                       'iht_heater',
-                       'boiler_4',
-                       'boiler_5',
-                       'boiler_6',
-                       'boiler_7',
-                       'h2_flare',
+                      'crude_vtg',
+                      'crude_rfg',
+                      'n_vac',
+                      's_vac',
+                      'ref_heater_1',
+                      'ref_heater_2',
+                      'naptha_heater',
+                      'naptha_reboiler',
+                      'dhds_heater_3',
+                      'hcr_1',
+                      'hcr_2',
+                      'rxn_r_1',
+                      'rxn_r_4',
+                      'coker_1',
+                      'coker_2',
+                      'coker_e',
+                      'coker_w',
+                      'h2_plant_2',
+                      'dhds_heater_1',
+                      'dhds_reboiler_1',
+                      'dhds_heater_2',
+                      'h_furnace_n',
+                      'h_furnace_s',
+                      'calciner_1',
+                      'calciner_2',
+                      'iht_heater',
+                      'boiler_4',
+                      'boiler_5',
+                      'boiler_6',
+                      'boiler_7',
+                      'h2_flare',
                       ]
-#equip_to_calculate = ['coker_e', 'coker_w']
 
 pollutants_to_calculate = [
                            # criteria
@@ -154,6 +152,9 @@ equip_types = {
         'boiler_6'       : 'heaterboiler',
         'boiler_7'       : 'heaterboiler'
         }
+
+equip_types_to_calculate = set([equip_types[emis_unit] for emis_unit
+                                                       in equip_to_calculate])
 
 # column names for final output
 output_colnames_map = {
