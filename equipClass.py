@@ -1,4 +1,4 @@
-import time, glob
+import time, datetime, glob
 import pandas as pd
 from collections import OrderedDict
 
@@ -55,11 +55,11 @@ class AnnualEquipment(object):
         self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
         self.fname_analyses = str(self.year)+'_analyses_agg.xlsx'   # all gas lab-test data
         self.fname_ewcoker  = str(self.year)+'_data_EWcoker_Q3.xlsx'   # coker CEMS, fuel, flow data
-        self.fname_fuel     = str(self.year)+'_usage_fuel_r2.xlsx'     # annual fuel usage for all equipment
+        self.fname_fuel     = str(self.year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
         self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
         self.fname_flarefuel= str(self.year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
         self.fname_h2stack  = str(self.year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
-        self.fname_flareEFs = str(self.year)+'_EFs_flare_DUMMY.xlsx'# EFs for H2 flare
+        self.fname_flareEFs = str(self.year)+'_EFs_flare.xlsx'# EFs for H2 flare
         self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
         self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
         self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
@@ -100,7 +100,7 @@ class AnnualEquipment(object):
         self._parse_annual_facility_data()
     
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++DATA-PARSING METHODS CALLED BY self._parse_annual_facility_data()++++++++++++#
+#++DATA-PARSING METHODS CALLED BY self._parse_annual_facility_data()+++++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
     def _parse_annual_facility_data(self):
         """Parse facility-wide annual data."""
@@ -109,9 +109,10 @@ class AnnualEquipment(object):
         print('began parsing annual data at '+start_time)
 
         # CEMS, fuel analysis and usage, EFs (indented descriptions follow assignments)
-        print('  parsing CEMS data')
-        self.CEMS_annual    = self._parse_all_monthly_CEMS()
-                             # df: annual CEMS data
+        if not cf.equip_to_calculate == ['h2_flare']:
+            print('  parsing CEMS data')
+            self.CEMS_annual    = self._parse_all_monthly_CEMS()
+                                 # df: annual CEMS data
         print('  parsing lab analysis data')
         self.NG_annual      = ff.parse_annual_NG_lab_results(self.fpath_analyses,
                                                              self.labtab_NG)
@@ -134,6 +135,8 @@ class AnnualEquipment(object):
                              # df: hourly fuel data for all equipment
         self.flarefuel_annual = self._parse_annual_flare_fuel()
                              # df: hourly flare-gas data
+        self.flareHHV_annual= self._upsample_annual_flare_HHV()
+                             # series: hourly flare-gas HHV
         print('    parsed fuel data')
         print('  parsing emission factor data')
         self.flareEFs       = self._parse_annual_flare_EFs()
@@ -282,6 +285,16 @@ class AnnualEquipment(object):
         # the following returns SettingWithCopyWarning; can't figure out how to fix
         flare_EFs.loc[:,'ef'] = pd.to_numeric(flare_EFs.loc[:,'ef'])
         return flare_EFs
+    
+    def _upsample_annual_flare_HHV(self):
+        """Upsample/ffill flare HHV values to hourly, return hourly pd.Series."""
+        ser = self.flare_annual.loc['GBTU/CF'].copy()
+        ser = ser.append(pd.Series(index=[ser.index[-1]+ datetime.timedelta(days=1)]))
+        ser.index = ser.index.normalize()
+        ser = ser.resample('1H').ffill()
+        ser = ser.iloc[:-1]
+        ser.name = 'HHV_flare'
+        return ser
     
     def _parse_annual_flare_fuel(self):
         """Read annual fuel flow data for H2-plant flare, return pd.DataFrame."""
@@ -586,7 +599,8 @@ class AnnualEquipment(object):
         
 # begin temporary workaround        
         # if fuel not used in emis calc, set to zero
-        if self.unit_key in ['h2_plant_2', 'calciner_1', 'calciner_2']:
+        if self.unit_key in [#'h2_plant_2',
+                             'calciner_1', 'calciner_2']:
             monthly.loc['fuel_ng'] = 0
 # end temporary workaround
         
@@ -1313,16 +1327,103 @@ class MonthlyFlare(AnnualFlare):
         self.flare_monthly  = ff.get_monthly_lab_results(self.annual_equip.flare_annual,
                                                          self.ts_interval)
         self.HHV_flare      = ff.calculate_monthly_HHV(self.flare_monthly)
-        self.f_factor_flare = ff.calculate_monthly_f_factor(self.flare_monthly,
-                                                            self.annual_equip.fpath_FG_chem,
-                                                            self.ts_interval)
+#        self.f_factor_flare = ff.calculate_monthly_f_factor(self.flare_monthly,
+#                                                            self.annual_equip.fpath_FG_chem,
+#                                                            self.ts_interval)
         self.flarefuel_annual = self.annual_equip.flarefuel_annual
+        self.flareHHV_annual  = self.annual_equip.flareHHV_annual
         
         self.monthly_emis   = self.calculate_monthly_flare_emissions()
+        self.monthly_emis_apply_hourly = self.calculate_monthly_flare_emissions_apply_hourly()
+    
+    def calculate_monthly_flare_emissions_apply_hourly(self):
+        """Return pd.Series of flare emissions for specified month (HHV applied hourly)."""
+        """
+        ***HHV is applied at hourly aggregation level***
+        """
+        fuel = self.get_monthly_flare_fuel()
+        # create intermediate column
+        fuel.loc[:,'var'] = 0
+        fuel.loc[ (fuel['valve'] > 0), 'var'] = fuel['discharge_to_flare']
+        # if not 'unit down' and valve > 0: scenario = 'ssm'
+        fuel.loc[:, 'op_scenario'] = 'ssm'
+        # if not 'unit down' and valve <= 0: scenario = 'routine'
+        fuel.loc[ (fuel['var'] == 0), 'op_scenario'] = 'routine'
+        # if valve == 100 or valve < -4: scenario = 'unit down'
+        fuel.loc[ (fuel['valve'] < -4)
+              | (fuel['valve'] == 100), 'op_scenario'] = 'unit down'
+        # make sure that only the three scenarios are represented
+        if len(fuel.op_scenario.unique()) > 3:
+            scenarios = '  '.join(str(x)
+                                  for x
+                                  in list(fuel.op_scenario.unique()))
+            raise ValueError('more than 3 scenarios listed: '+scenarios)
+        
+        HHV = self.get_monthly_flare_HHV_upsampled()
+        fuel = fuel.merge(HHV, right_index=True, left_index=True)
+        fuel['tstamp'] = fuel.index
+        
+        emis = self.calculate_flare_emissions_all_hourly(fuel)
+        
+        emis['equipment'] = self.unit_key
+        emis['month']     = self.month
+        emis['fuel_ng']   = fuel[fuel['op_scenario'] == 'routine'].loc[:,'flare_header_flow'].sum()
+        emis['fuel_rfg']  = fuel[fuel['op_scenario'] == 'ssm'].loc[:,'flare_header_flow'].sum()
+        emis['pm25']      = -9999*2000/12 # temporarily hardcoded, as flag
+        emis['pm10']      = -9999*2000/12
+        emis['h2so4']     = 0
+        
+        emis = emis.reindex(self.col_name_order)
+        emis.loc[self.col_name_order[4:-1]] = emis.loc[
+                                self.col_name_order[4:-1]] / 2000 # lbs --> tons
+        return emis
+
+    def calculate_flare_emissions_all_hourly(self,fuel_df):
+        """Return list of pd.DataFrames of hourly flare emissions."""
+        hourly_emis = []
+        for tstamp in fuel_df.index:
+            if fuel_df.loc[tstamp, 'op_scenario'] in ['ssm', 'routine']:
+                hourly_emis.append(self.calculate_flare_emissions_each_hourly(fuel_df, tstamp))
+        emis_sum_by_pol = pd.concat(hourly_emis).groupby(['pollutant'])['emis'].sum()
+        return emis_sum_by_pol
+    
+    def calculate_flare_emissions_each_hourly(self, df, tstamp):
+        """Return pd.DataFrame of emissions for specifed hour."""
+        flare_EFs = self.flareEFs.copy()
+        fuel_flow = df.loc[tstamp, 'flare_header_flow']
+        HHV_hourly = df.loc[tstamp, 'HHV_flare']
+        
+        if df.loc[tstamp, 'op_scenario'] == 'ssm':
+            flare_is_on = True
+        elif df.loc[tstamp, 'op_scenario'] == 'routine':
+            flare_is_on = False
+
+        if flare_is_on:
+            ef_df = flare_EFs[flare_EFs['flare_on'] == True].copy()
+        elif not flare_is_on:
+            ef_df = flare_EFs[flare_EFs['flare_on'] == False].copy()
+       
+        # set conversion multiplier to convert units not in mscf
+        ef_df['conv_mult'] = 1
+        ef_df.loc[ef_df['units'] == 'lb/mmbtu', 'conv_mult'] = (1/1000
+                                                             * HHV_hourly)
+        ef_df.loc[ef_df['units'] == 'lb/mmscf', 'conv_mult'] = 1/1000
+        ef_df['emis'] = ef_df['ef'] * ef_df['conv_mult'] * fuel_flow
+        return ef_df
+    
+    def get_monthly_flare_HHV_upsampled(self):
+        """Return monthly pd.Series of HHV values upsampled to hourly."""
+        annual_upsampled = self.flareHHV_annual
+        monthly_upsampled = annual_upsampled.loc[
+                                    self.ts_interval[0]:
+                                    self.ts_interval[1]]
+        return monthly_upsampled
     
     def calculate_monthly_flare_emissions(self):
         """Return pd.Series of flare emissions for specified month."""
         """
+        ***HHV is applied at monthly aggregation level***
+        
         LOGIC FOR CALCULATING FLARE EMISSIONS
         [possible scenarios]
             unit down --> no emissions calculated
@@ -1407,12 +1508,12 @@ class MonthlyFlare(AnnualFlare):
     
     def get_monthly_flare_EFs(self):
         """Return pd.DataFrame of flare EFs for specified month."""
-        ef_df = self.flareEFs
+        ef_df = self.flareEFs.copy()
         # set conversion multiplier to convert units not in mscf
         ef_df['conv_mult'] = 1
-        ef_df.loc[ef_df.units == 'lb/mmbtu', 'conv_mult'] = (1/1000
+        ef_df.loc[ef_df['units'] == 'lb/mmbtu', 'conv_mult'] = (1/1000
                                                              * self.HHV_flare)
-        ef_df.loc[ef_df.units == 'lb/mmscf', 'conv_mult'] = 1/1000
+        ef_df.loc[ef_df['units'] == 'lb/mmscf', 'conv_mult'] = 1/1000
         return ef_df
     
     def get_monthly_flare_fuel(self):
