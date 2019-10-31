@@ -386,6 +386,11 @@ class AnnualEquipment(object):
         
         fuel.columns = mapped_names
         
+        # N and S coker heaters went down at these respective dates,
+        # after which no fuel flow or emissions
+        fuel.loc['2019-05-06 21:00:00': ,'coker_1'] = 0
+        fuel.loc['2019-04-26 06:00:00': ,'coker_2'] = 0
+
         fuel = fuel.clip(lower=0)
         return fuel
     
