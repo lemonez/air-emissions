@@ -226,17 +226,14 @@ class AnnualParser(object):
 
         if 'heaterboiler' in cf.equip_types_to_calculate:
             annual_hb       = equipClass.AnnualHB(self.annual_equip)
-            print('instantiated a heaterboiler')
         if 'coker_old' in cf.equip_types_to_calculate:
             annual_coker_old= equipClass.AnnualCokerOLD(self.annual_equip)
         if 'coker_new' in cf.equip_types_to_calculate:
             annual_coker    = equipClass.AnnualCoker(self.annual_equip)
         if 'calciner' in cf.equip_types_to_calculate:
             annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
-            print('instantiated a calciner')
         if 'flare' in cf.equip_types_to_calculate:
             annual_flare    = equipClass.AnnualFlare(self.annual_equip)
-            print('instantiated a flare')
         if 'h2plant' in cf.equip_types_to_calculate:
             annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
 
