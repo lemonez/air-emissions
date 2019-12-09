@@ -53,16 +53,16 @@ class AnnualEquipment(object):
         self.fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
         self.fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
         self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
-        self.fname_analyses = str(self.year)+'_analyses_agg.xlsx'   # all gas lab-test data
-        self.fname_ewcoker  = str(self.year)+'_data_EWcoker_Q3.xlsx'   # coker CEMS, fuel, flow data
-        self.fname_fuel     = str(self.year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
-        self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
-        self.fname_flarefuel= str(self.year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
-        self.fname_h2stack  = str(self.year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
+        self.fname_analyses = str(self.year)+'_analyses_agg_Nov.xlsx'   # all gas lab-test data
+        self.fname_ewcoker  = str(self.year)+'_data_EWcoker_Nov.xlsx'   # coker CEMS, fuel, flow data
+        self.fname_fuel     = str(self.year)+'_usage_fuel_Nov.xlsx'     # annual fuel usage for all equipment
+        self.fname_coke     = str(self.year)+'_usage_coke_Nov.xlsx'     # annual coke usage for calciners
+        self.fname_flarefuel= str(self.year)+'_usage_flarefuel_Nov.xlsx'# annual flare-fuel through H2-plant flare
+        self.fname_h2stack  = str(self.year)+'_flow_h2stack_Nov.xlsx'   # annual H2-stack flow data
         self.fname_flareEFs = str(self.year)+'_EFs_flare.xlsx'# EFs for H2 flare
         self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
         self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
-        self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
+        self.fname_EFs      = 'EFs_monthly_Oct.xlsx'        # monthly-EF excel workbook
         
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
