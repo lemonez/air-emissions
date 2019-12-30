@@ -9,14 +9,17 @@ import pandas as pd
 
 #### configure data/calculations ####
 data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
-data_dir      = './data/'
-out_dir       = './output/Oct/'
+data_dir      = './data_'+str(data_year)+'/'
+out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'so2'
+out_dir_child = 'so2_Nov_all'
+
+round_decimals = 4
 
 first_month_to_calculate = 1
-last_month_to_calculate  = 10
+last_month_to_calculate  = 11
+
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate

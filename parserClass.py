@@ -184,7 +184,7 @@ class AnnualParser(object):
                     else:
                         outname = outname.format('_calciners_TOXICS')
                     
-                df.round(2).to_csv(outname)
+                df.round(cf.round_decimals).to_csv(outname)
         
         if self.return_dfs: # DEBUG
             return frames

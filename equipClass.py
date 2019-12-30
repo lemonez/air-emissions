@@ -62,7 +62,7 @@ class AnnualEquipment(object):
         self.fname_flareEFs = str(self.year)+'_EFs_flare.xlsx'# EFs for H2 flare
         self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
         self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
-        self.fname_EFs      = 'EFs_monthly_Oct.xlsx'        # monthly-EF excel workbook
+        self.fname_EFs      = 'EFs_monthly_Nov.xlsx'        # monthly-EF excel workbook
         
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
@@ -426,6 +426,8 @@ class AnnualEquipment(object):
         cems_df = pd.read_csv(path, usecols=[1,2,3], header=None)
         cems_df.columns = ['ptag', 'tstamp', 'val']
         cems_df['tstamp'] = pd.to_datetime(cems_df['tstamp'])
+        # remove duplicate rows from daylight savings for 11/3/2019
+        cems_df = cems_df[cems_df['tstamp'].dt.minute != 2]
         print('    parsed CEMS data in: '+path)
         return cems_df
     
@@ -559,7 +561,7 @@ class AnnualEquipment(object):
             if pol not in monthly.index:
                 # need this logic to avoid errors while PM25 & PM 10 EFs are added
                 if pol not in self.EFunits.loc[self.unit_key].index:
-                    monthly.loc[pol] = -9999*2000/12 # error flag that will show up as -9999
+                    monthly.loc[pol] = -9999 * 2000 / 12 # error flag that will show up as -9999
                 else:
                     if (self.EFunits.loc[self.unit_key]
                                     .loc[pol]
@@ -614,7 +616,7 @@ class AnnualEquipment(object):
     def convert_from_ppm(self):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
         both_df = self.merge_fuel_and_CEMS()
-        
+ #TODO: if this is the only branch of the logic, move 'if' statement to caller
         if self.unit_key in self.equip_ptags.keys():
             if self.unit_key == 'h2_plant_2':
                 stack_df = self.get_monthly_h2stack()
@@ -652,7 +654,9 @@ class AnnualEquipment(object):
                 both_df[pol.split('_')[0]] = (
                                         both_df[pol]
                                         * ppm_conv_facts[pol.split('_')[0]]
+                                            # ==> lb/scf
                                         * both_df['dscfh'])
+                                            # ==> lb
         return both_df
 
     def merge_fuel_and_CEMS(self):
