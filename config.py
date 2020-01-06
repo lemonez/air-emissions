@@ -8,17 +8,17 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
-data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
+data_year     = 2018  # year_to_calculate = int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'so2_Nov_all'
+out_dir_child = '2018_so2_Dec_all'
 
 round_decimals = 4
 
 first_month_to_calculate = 1
-last_month_to_calculate  = 11
+last_month_to_calculate  = 12
 
 
 # just to be explicit: this is the offset for accessing tstamp intervals
@@ -39,14 +39,14 @@ equip_to_calculate = [
                       'rxn_r_4',
                       'coker_1',
                       'coker_2',
-                      'coker_e',
-                      'coker_w',
+ #                     'coker_e',
+ #                     'coker_w',
                       'h2_plant_2',
                       'dhds_heater_1',
                       'dhds_reboiler_1',
                       'dhds_heater_2',
-                      'h_furnace_n',
-                      'h_furnace_s',
+ #                     'h_furnace_n',
+ #                     'h_furnace_s',
                       'calciner_1',
                       'calciner_2',
                       'iht_heater',
@@ -54,7 +54,7 @@ equip_to_calculate = [
                       'boiler_5',
                       'boiler_6',
                       'boiler_7',
-                      'h2_flare',
+ #                     'h2_flare',
                       ]
 
 pollutants_to_calculate = [
