@@ -60,7 +60,6 @@ class AnnualParser(object):
         annual_df = self.format_annual_outnames()
         print('Slicing and dicing emissions data for output.')
 
-
         drop_pollutants = [pol for pol in self.pollutants_all
                                if pol not in self.pollutants_to_calc
                                and pol in annual_df.columns]
@@ -69,23 +68,24 @@ class AnnualParser(object):
 #TODO: refactor to create MultiIndex from existing columns, not based on config file; less error-prone
         # create MultiIndex for renaming columns
         if not self.is_toxics:
-            arr_col_lev0 = ['Refinery Fuel Gas', 'Natural Gas']
-            arr_col_lev1 = ['mscf'] * 2
-            for pol in cf.pollutants_to_calculate:
-                if pol in ['NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'CO2']:
-                    arr_col_lev0 += [pol]
-                    arr_col_lev1 += ['tons']
-                elif pol in ['H2SO4']:
-                    arr_col_lev0 += [pol]
-                    arr_col_lev1 += ['lbs']            
-            arr_col = [arr_col_lev0, arr_col_lev1]
-                #arr_col = [['Refinery Fuel Gas', 'Natural Gas',
-                #            'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4'],
-                #           (['mscf'] * 2) + (['tons'] * 7) + (['lbs'] * 1)]
+            if 'CO2' not in cf.pollutants_to_calculate:
+                arr_col_lev0 = ['Refinery Fuel Gas', 'Natural Gas']
+                arr_col_lev1 = ['mscf'] * 2
+                for pol in cf.pollutants_to_calculate:
+                    if pol in ['NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'CO2']:
+                        arr_col_lev0 += [pol]
+                        arr_col_lev1 += ['tons']
+                    elif pol in ['H2SO4']:
+                        arr_col_lev0 += [pol]
+                        arr_col_lev1 += ['lbs']            
+                arr_col = [arr_col_lev0, arr_col_lev1]
+                    #arr_col = [['Refinery Fuel Gas', 'Natural Gas',
+                    #            'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4'],
+                    #           (['mscf'] * 2) + (['tons'] * 7) + (['lbs'] * 1)]
 
-            if False: # replace with 'if calculating CO2' statement
-                arr_col = [['Coker Fuel Gas', 'Pilot Natural Gas', 'CO2'],
-                           (['mscf'] * 2) + (['tons'] * 1)]
+            elif 'CO2' in cf.pollutants_to_calculate:
+                arr_col = [['Combined Fuel Gas', 'CO2'],
+                           (['mscf'] * 1) + (['tons'] * 1)]
 #        else:
 #            if not self.is_calciner_toxics:
 #                arr_col = [['Refinery Fuel Gas', 'Natural Gas'] + cf.toxics_with_EFs,
@@ -207,12 +207,13 @@ class AnnualParser(object):
 
         col_order = ['WED Pt', 'Equipment', 'Month']
         if not self.is_toxics:
-            col_order += ['Refinery Fuel Gas', 'Natural Gas']
-            col_order += ['NOx', 'CO', 'SO2', 'VOC',
-                          'PM', 'PM25', 'PM10', 'H2SO4']
-        if False: # replace with 'if calculating CO2' statement
-            col_order = ['WED Pt', 'Equipment', 'Month',
-                         'Coker Fuel Gas', 'Pilot Natural Gas', 'CO2']
+            if 'CO2' not in cf.pollutants_to_calculate:
+                col_order += ['Refinery Fuel Gas', 'Natural Gas']
+                col_order += ['NOx', 'CO', 'SO2', 'VOC',
+                              'PM', 'PM25', 'PM10', 'H2SO4']
+            elif 'CO2' in cf.pollutants_to_calculate:
+                col_order += ['Combined Fuel Gas']
+                col_order += ['CO2']
 
         annual_df = (annual_df.replace({'equipment': self.annual_equip
                                                          .unitkey_name})
@@ -223,71 +224,110 @@ class AnnualParser(object):
     def aggregate_all_to_annual(self):
         """Return pd.DataFrame of annual emissions from listed equipment."""
         print('Calculating emissions for equipment and months specified...')
+        if 'CO2' not in cf.pollutants_to_calculate:
+            if 'heaterboiler' in cf.equip_types_to_calculate:
+                annual_hb       = equipClass.AnnualHB(self.annual_equip)
+            if 'coker_old' in cf.equip_types_to_calculate:
+                annual_coker_old= equipClass.AnnualCokerOLD(self.annual_equip)
+            if 'coker_new' in cf.equip_types_to_calculate:
+                annual_coker    = equipClass.AnnualCoker(self.annual_equip)
+            if 'calciner' in cf.equip_types_to_calculate:
+                annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
+            if 'flare' in cf.equip_types_to_calculate:
+                annual_flare    = equipClass.AnnualFlare(self.annual_equip)
+            if 'h2plant' in cf.equip_types_to_calculate:
+                annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
 
-        if 'heaterboiler' in cf.equip_types_to_calculate:
-            annual_hb       = equipClass.AnnualHB(self.annual_equip)
-        if 'coker_old' in cf.equip_types_to_calculate:
-            annual_coker_old= equipClass.AnnualCokerOLD(self.annual_equip)
-        if 'coker_new' in cf.equip_types_to_calculate:
-            annual_coker    = equipClass.AnnualCoker(self.annual_equip)
-        if 'calciner' in cf.equip_types_to_calculate:
-            annual_calciner = equipClass.AnnualCalciner(self.annual_equip)
-        if 'flare' in cf.equip_types_to_calculate:
-            annual_flare    = equipClass.AnnualFlare(self.annual_equip)
-        if 'h2plant' in cf.equip_types_to_calculate:
-            annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
+            ordered_equip_to_calculate = [equip for equip
+                                                in self.ordered_equip
+                                                if equip in cf.equip_to_calculate]
+            for unit_key in ordered_equip_to_calculate:
+                each_equip_ser  = []
+                # instantiate annual equip_type class instances
+                for month in self.months_to_calc:
+                    if self.verbose_logging:
+                        print('\tCalculating month {:2d}{}emissions for {}...'
+                                    .format(month, self.toxics_text,
+                                            self.annual_equip.unitkey_name[unit_key]))
+                    if not self.is_toxics:
+                        # eu_type --> 'flare' , 'calciner', etc.
+                        eu_type = self.equip_types[unit_key]
+                        if eu_type == 'heaterboiler':
+                            emis = (equipClass
+                                    .MonthlyHB(unit_key, month, annual_hb)
+                                    .monthly_emis)
+                        if eu_type == 'coker_new':
+                            emis = (equipClass
+                                    .MonthlyCoker(unit_key, month, annual_coker)
+                                    .monthly_emis)
+                        if eu_type == 'coker_old':
+                            emis = (equipClass
+                                    .MonthlyCokerOLD(unit_key, month, annual_coker_old)
+                                    .monthly_emis)
+                        if eu_type == 'calciner':
+                            emis = (equipClass
+                                    .MonthlyCalciner(unit_key, month, annual_calciner)
+                                    .monthly_emis)
+                        if eu_type == 'flare':
+                            emis = (equipClass
+                                    .MonthlyFlare(unit_key, month, annual_flare)
+                                    .monthly_emis)
+                        if eu_type == 'h2plant':
+                            emis = (equipClass
+                                    .MonthlyH2Plant(unit_key, month, annual_h2plant)
+                                    .monthly_emis)
+                    #else:
+                        # see original equipclass.py script...
+                    each_equip_ser.append(emis)
+                all_months = pd.concat(each_equip_ser, axis=1)
+                self.all_equip_dict[unit_key] = all_months
+            
+            # transpose and concatenate DataFrames
+            annual_dfs = []
+            for v in self.all_equip_dict.values():
+                v.index.name = None
+                annual_dfs.append(v.T)
+            annual = pd.concat(annual_dfs)
+            
+            # convert type "object" to type "float"
+            annual[annual.columns[2:]] = annual[annual.columns[2:]].astype(float)
+            return annual
+        else:
+            if 'coker_new' in cf.equip_types_to_calculate:
+                annual_coker_co2 = equipClass.AnnualCoker_CO2(self.annual_equip)
 
-        ordered_equip_to_calculate = [equip for equip
-                                            in self.ordered_equip
-                                            if equip in cf.equip_to_calculate]
-        for unit_key in ordered_equip_to_calculate:
-            each_equip_ser  = []
-            # instantiate annual equip_type class instances
-            for month in self.months_to_calc:
-                if self.verbose_logging:
-                    print('\tCalculating month {:2d}{}emissions for {}...'
-                                .format(month, self.toxics_text,
-                                        self.annual_equip.unitkey_name[unit_key]))
-                if not self.is_toxics:
-                    # eu_type --> 'flare' , 'calciner', etc.
-                    eu_type = self.equip_types[unit_key]
-                    if eu_type == 'heaterboiler':
-                        emis = (equipClass
-                                .MonthlyHB(unit_key, month, annual_hb)
-                                .monthly_emis)
-                    if eu_type == 'coker_new':
-                        emis = (equipClass
-                                .MonthlyCoker(unit_key, month, annual_coker)
-                                .monthly_emis)
-                    if eu_type == 'coker_old':
-                        emis = (equipClass
-                                .MonthlyCokerOLD(unit_key, month, annual_coker_old)
-                                .monthly_emis)
-                    if eu_type == 'calciner':
-                        emis = (equipClass
-                                .MonthlyCalciner(unit_key, month, annual_calciner)
-                                .monthly_emis)
-                    if eu_type == 'flare':
-                        emis = (equipClass
-                                .MonthlyFlare(unit_key, month, annual_flare)
-                                .monthly_emis)
-                    if eu_type == 'h2plant':
-                        emis = (equipClass
-                                .MonthlyH2Plant(unit_key, month, annual_h2plant)
-                                .monthly_emis)
-                #else:
-                    # see original equipclass.py script...
-                each_equip_ser.append(emis)
-            all_months = pd.concat(each_equip_ser, axis=1)
-            self.all_equip_dict[unit_key] = all_months
-        
-        # transpose and concatenate DataFrames
-        annual_dfs = []
-        for v in self.all_equip_dict.values():
-            v.index.name = None
-            annual_dfs.append(v.T)
-        annual = pd.concat(annual_dfs)
-        
-        # convert type "object" to type "float"
-        annual[annual.columns[2:]] = annual[annual.columns[2:]].astype(float)
-        return annual
+            ordered_equip_to_calculate = [equip for equip
+                                                in self.ordered_equip
+                                                if equip in cf.equip_to_calculate]
+            for unit_key in ordered_equip_to_calculate:
+                each_equip_ser  = []
+                # instantiate annual equip_type class instances
+                for month in self.months_to_calc:
+                    if self.verbose_logging:
+                        print('\tCalculating month {:2d}{}emissions for {}...'
+                                    .format(month, self.toxics_text,
+                                            self.annual_equip.unitkey_name[unit_key]))
+                    if not self.is_toxics:
+                        # eu_type --> 'flare' , 'calciner', etc.
+                        eu_type = self.equip_types[unit_key]
+                        if eu_type == 'coker_new':
+                            emis = (equipClass
+                                    .MonthlyCoker_CO2(unit_key, month, annual_coker_co2)
+                                    .monthly_emis)
+
+                    #else:
+                        # see original equipclass.py script...
+                    each_equip_ser.append(emis)
+                all_months = pd.concat(each_equip_ser, axis=1)
+                self.all_equip_dict[unit_key] = all_months
+            
+            # transpose and concatenate DataFrames
+            annual_dfs = []
+            for v in self.all_equip_dict.values():
+                v.index.name = None
+                annual_dfs.append(v.T)
+            annual = pd.concat(annual_dfs)
+            
+            # convert type "object" to type "float"
+            annual[annual.columns[2:]] = annual[annual.columns[2:]].astype(float)
+            return annual

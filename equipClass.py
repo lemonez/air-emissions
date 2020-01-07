@@ -318,15 +318,15 @@ class AnnualEquipment(object):
         df.loc[:,'flare_on'] = 'unassigned'
         
         # create separate EF DataFrames for pilot gas vs. active flaring
-        flare_off_EFs = df.iloc[0:5]
+        flare_off_EFs = df.copy().iloc[0:5]
         flare_off_EFs.loc[:,'flare_on'] = False
-        flare_on_EFs = df.iloc[8:13]
+        flare_on_EFs = df.copy().iloc[8:13]
         flare_on_EFs.loc[:,'flare_on'] = True
         
         # combine cleaned-up DataFrames and cast as numeric
         flare_EFs = pd.concat([flare_off_EFs, flare_on_EFs])
         # the following returns SettingWithCopyWarning; can't figure out how to fix
-        flare_EFs.loc[:,'ef'] = pd.to_numeric(flare_EFs.loc[:,'ef'])
+        flare_EFs.loc[:,'ef'] = pd.to_numeric(flare_EFs.copy().loc[:,'ef'])
         return flare_EFs
     
     def _upsample_annual_flare_HHV(self):
@@ -1190,8 +1190,7 @@ class AnnualCoker_CO2(AnnualEquipment):
 class MonthlyCoker_CO2(AnnualCoker_CO2):
     """Calculate monthly coker CO2 emissions."""
 # replace 'rfg_mscfh' with 'fuel_rfg' once units are figured out
-    col_name_order = ['equipment', 'month',
-                      'cokerfg_mscfh', 'pilot_mscfh', 'co2']
+    col_name_order = ['equipment', 'month', 'stack_dscfh', 'co2']
     
     def __init__(self,
                  unit_key,
@@ -1229,7 +1228,8 @@ class MonthlyCoker_CO2(AnnualCoker_CO2):
                                             self.cokerFG_monthly,
                                             self.annual_equip.fpath_FG_chem,
                                             self.ts_interval)
-    
+        self.monthly_emis   = self.calculate_monthly_equip_emissions()
+                                            
     def calculate_monthly_equip_emissions(self):
         """Write hourly combined fuel csv, return monthly emissions as pd.Series."""
         hourly = self.calculate_monthly_co2_emissions()
@@ -1241,7 +1241,7 @@ class MonthlyCoker_CO2(AnnualCoker_CO2):
                   + 'stackflow' + '_'
                   + self.unit_key + '.csv'
                   )
-        hourly['dscfh'].to_csv(outname, header=True)
+        hourly['stack_dscfh'].to_csv(outname, header=True)
         monthly = hourly.sum()
         monthly.loc['equipment'] = self.unit_key
         monthly.loc['month'] = self.month
@@ -1294,8 +1294,8 @@ class MonthlyCoker_CO2(AnnualCoker_CO2):
                             * self.f_factor_NG
                             * 20.9 / (20.9 - df['o2_%']))
 
-        df['dscfh'] = df['cokerfg_dscfh'] + df['pilot_dscfh']
-        df['co2']   = df['co2_%'] * df['dscfh'] * 5.18E-7
+        df['stack_dscfh'] = df['cokerfg_dscfh'] + df['pilot_dscfh']
+        df['co2']   = df['co2_%'] * df['stack_dscfh'] * 5.18E-7
 
         return df.loc[self.ts_interval[0]:self.ts_interval[1]]
 
