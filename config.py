@@ -8,17 +8,17 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
-data_year     = 2018  # year_to_calculate = int(time.strftime('%Y'))
+data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = '2018_so2_Dec_all'
+out_dir_child = 'GHG_Nov_all'
 
 round_decimals = 4
 
 first_month_to_calculate = 1
-last_month_to_calculate  = 12
+last_month_to_calculate  = 4
 
 
 # just to be explicit: this is the offset for accessing tstamp intervals
@@ -61,11 +61,11 @@ pollutants_to_calculate = [
                            # criteria
 #                           'NOx',
 #                           'CO',
-                           'SO2',
+#                           'SO2,
 #                           'VOC',
 #                           'PM', 'PM25', 'PM10',
 #                           'H2SO4',
-                           # GHG
+                            'GHG'
 #                           'CO2'
                            ]
 

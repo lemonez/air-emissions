@@ -48,63 +48,21 @@ class AnnualEquipment(object):
         self.annual_prefix  = self.data_prefix+'annual/'# data that changes monthly/annually
         self.static_prefix  = self.data_prefix+'static/'# static data
         self.CEMS_dir       = self.annual_prefix+'CEMS/'# monthly CEMS data
-# # 2019 data        
-#        # files
-#        self.fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
-#        self.fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
-#        self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
-#        self.fname_analyses = str(self.year)+'_analyses_agg_Nov.xlsx'   # all gas lab-test data
-#        self.fname_ewcoker  = str(self.year)+'_data_EWcoker_Nov.xlsx'   # coker CEMS, fuel, flow data
-#        self.fname_fuel     = str(self.year)+'_usage_fuel_Nov.xlsx'     # annual fuel usage for all equipment
-#        self.fname_coke     = str(self.year)+'_usage_coke_Nov.xlsx'     # annual coke usage for calciners
-#        self.fname_flarefuel= str(self.year)+'_usage_flarefuel_Nov.xlsx'# annual flare-fuel through H2-plant flare
-#        self.fname_h2stack  = str(self.year)+'_flow_h2stack_Nov.xlsx'   # annual H2-stack flow data
-#        self.fname_flareEFs = str(self.year)+'_EFs_flare.xlsx'# EFs for H2 flare
-#        self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
-#        self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
-#        self.fname_EFs      = 'EFs_monthly_Nov.xlsx'        # monthly-EF excel workbook
-#  
-#        # paths
-#        self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
-#        self.fpath_NG_chem  = self.static_prefix+self.fname_NG_chem
-#        self.fpath_FG_chem  = self.static_prefix+self.fname_FG_chem
-#        self.fpath_analyses = self.annual_prefix+self.fname_analyses
-#        self.fpath_ewcoker  = self.annual_prefix+self.fname_ewcoker
-#        self.fpath_fuel     = self.annual_prefix+self.fname_fuel
-#        self.fpath_coke     = self.annual_prefix+self.fname_coke
-#        self.fpath_flarefuel= self.annual_prefix+self.fname_flarefuel
-#        self.fpath_h2stack  = self.annual_prefix+self.fname_h2stack 
-#        self.fpath_flareEFs = self.annual_prefix+self.fname_flareEFs
-#        self.fpath_toxicsEFs= self.annual_prefix+self.fname_toxicsEFs
-#        self.fpath_toxicsEFs_calciners = self.annual_prefix \
-#                                            +self.fname_toxicsEFs_calciners
-#        self.fpath_EFs      = self.annual_prefix+self.fname_EFs
-#        
-#        # fuel analysis tabs
-#        self.labtab_NG       = '#2H2FdNatGas 2019'  # NG-sample lab-test data
-#        self.labtab_RFG      = 'RFG 2019'           # RFG-sample lab-test data
-#        self.labtab_cokerFG  = 'Coker FG 2019'      # cokerFG-sample lab-test data
-#        self.labtab_CVTG     = 'CVTG 2019'          # CVTG-sample lab-test data
-#        self.labtab_flare    = '#2H2 Flare 2019'    # flare-gas sample lab-test data
-#        
-#        self.sheet_fuel = '10-19'
- 
-
- # 2018 data        
+ # 2019 data        
         # files
         self.fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
         self.fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
         self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
-        self.fname_analyses = str(self.year)+'_analyses_agg.xlsx'   # all gas lab-test data
-        self.fname_ewcoker  = str(self.year)+'_data_EWcoker_DUMMY.xlsx'   # coker CEMS, fuel, flow data
-        self.fname_fuel     = str(self.year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
-        self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
-        self.fname_flarefuel= str(self.year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
-        self.fname_h2stack  = str(self.year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
+        self.fname_analyses = str(self.year)+'_analyses_agg_Nov.xlsx'   # all gas lab-test data
+        self.fname_ewcoker  = str(self.year)+'_data_EWcoker_Nov.xlsx'   # coker CEMS, fuel, flow data
+        self.fname_fuel     = str(self.year)+'_usage_fuel_Nov.xlsx'     # annual fuel usage for all equipment
+        self.fname_coke     = str(self.year)+'_usage_coke_Nov.xlsx'     # annual coke usage for calciners
+        self.fname_flarefuel= str(self.year)+'_usage_flarefuel_Nov.xlsx'# annual flare-fuel through H2-plant flare
+        self.fname_h2stack  = str(self.year)+'_flow_h2stack_Nov.xlsx'   # annual H2-stack flow data
         self.fname_flareEFs = str(self.year)+'_EFs_flare.xlsx'# EFs for H2 flare
         self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
         self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
-        self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
+        self.fname_EFs      = 'EFs_monthly_Nov.xlsx'        # monthly-EF excel workbook
   
         # paths
         self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
@@ -123,13 +81,55 @@ class AnnualEquipment(object):
         self.fpath_EFs      = self.annual_prefix+self.fname_EFs
         
         # fuel analysis tabs
-        self.labtab_NG       = '#2H2FdNatGas 2018'  # NG-sample lab-test data
-        self.labtab_RFG      = 'RFG 2018'           # RFG-sample lab-test data
-        self.labtab_cokerFG  = 'Coker FG 2018'      # cokerFG-sample lab-test data
-        self.labtab_CVTG     = 'CVTG 2018'          # CVTG-sample lab-test data
-        self.labtab_flare    = '#2H2 Flare 2018'    # flare-gas sample lab-test data
+        self.labtab_NG       = '#2H2FdNatGas 2019'  # NG-sample lab-test data
+        self.labtab_RFG      = 'RFG 2019'           # RFG-sample lab-test data
+        self.labtab_cokerFG  = 'Coker FG 2019'      # cokerFG-sample lab-test data
+        self.labtab_CVTG     = 'CVTG 2019'          # CVTG-sample lab-test data
+        self.labtab_flare    = '#2H2 Flare 2019'    # flare-gas sample lab-test data
         
-        self.sheet_fuel = '10-18'
+        self.sheet_fuel = '10-19'
+ 
+
+# # 2018 data        
+#        # files
+#        self.fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
+#        self.fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
+#        self.fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
+#        self.fname_analyses = str(self.year)+'_analyses_agg.xlsx'   # all gas lab-test data
+#        self.fname_ewcoker  = str(self.year)+'_data_EWcoker_DUMMY.xlsx'   # coker CEMS, fuel, flow data
+#        self.fname_fuel     = str(self.year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
+#        self.fname_coke     = str(self.year)+'_usage_coke.xlsx'     # annual coke usage for calciners
+#        self.fname_flarefuel= str(self.year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
+#        self.fname_h2stack  = str(self.year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
+#        self.fname_flareEFs = str(self.year)+'_EFs_flare.xlsx'# EFs for H2 flare
+#        self.fname_toxicsEFs= str(self.year)+'_EFs_toxics.xlsx'     # EFs for toxics
+#        self.fname_toxicsEFs_calciners = str(self.year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
+#        self.fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
+#  
+#        # paths
+#        self.fpath_eqmap    = self.static_prefix+self.fname_eqmap
+#        self.fpath_NG_chem  = self.static_prefix+self.fname_NG_chem
+#        self.fpath_FG_chem  = self.static_prefix+self.fname_FG_chem
+#        self.fpath_analyses = self.annual_prefix+self.fname_analyses
+#        self.fpath_ewcoker  = self.annual_prefix+self.fname_ewcoker
+#        self.fpath_fuel     = self.annual_prefix+self.fname_fuel
+#        self.fpath_coke     = self.annual_prefix+self.fname_coke
+#        self.fpath_flarefuel= self.annual_prefix+self.fname_flarefuel
+#        self.fpath_h2stack  = self.annual_prefix+self.fname_h2stack 
+#        self.fpath_flareEFs = self.annual_prefix+self.fname_flareEFs
+#        self.fpath_toxicsEFs= self.annual_prefix+self.fname_toxicsEFs
+#        self.fpath_toxicsEFs_calciners = self.annual_prefix \
+#                                            +self.fname_toxicsEFs_calciners
+#        self.fpath_EFs      = self.annual_prefix+self.fname_EFs
+#        
+#        # fuel analysis tabs
+#        self.labtab_NG       = '#2H2FdNatGas 2018'  # NG-sample lab-test data
+#        self.labtab_RFG      = 'RFG 2018'           # RFG-sample lab-test data
+#        self.labtab_cokerFG  = 'Coker FG 2018'      # cokerFG-sample lab-test data
+#        self.labtab_CVTG     = 'CVTG 2018'          # CVTG-sample lab-test data
+#        self.labtab_flare    = '#2H2 Flare 2018'    # flare-gas sample lab-test data
+#        
+#        self.sheet_fuel = '10-18'
  
         # equipment mapping containers
         self.equip          = self._parse_equip_map()                # df: all equipment/PItag data
@@ -1231,8 +1231,17 @@ class MonthlyCoker_CO2(AnnualCoker_CO2):
                                             self.ts_interval)
     
     def calculate_monthly_equip_emissions(self):
-        """Return monthly emissions as pd.Series."""
+        """Write hourly combined fuel csv, return monthly emissions as pd.Series."""
         hourly = self.calculate_monthly_co2_emissions()
+        # write csv of hourly combined fuel flow for QA
+        outname = (
+                    cf.out_dir_child
+                  + str(self.annual_equip.year) + '_'
+                  + str(self.month).zfill(2) + '_'
+                  + 'stackflow' + '_'
+                  + self.unit_key + '.csv'
+                  )
+        hourly['dscfh'].to_csv(outname, header=True)
         monthly = hourly.sum()
         monthly.loc['equipment'] = self.unit_key
         monthly.loc['month'] = self.month
