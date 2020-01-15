@@ -471,8 +471,8 @@ class AnnualEquipment(object):
         else:
             hdr = None
         
-        cems_df = pd.read_csv(path, usecols=[1,2,3], header=hdr)
-        cems_df.columns = ['ptag', 'tstamp', 'val']
+        cems_df = pd.read_csv(path, usecols=[1,2,3,5], header=hdr)
+        cems_df.columns = ['ptag', 'tstamp', 'val', 'text_flag']
         cems_df['tstamp'] = pd.to_datetime(cems_df['tstamp'])
         # remove duplicate rows from daylight savings for 11/3/2019
         cems_df = cems_df[cems_df['tstamp'].dt.minute != 2]
