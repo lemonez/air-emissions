@@ -16,6 +16,7 @@ log_suffix    = ''
 out_dir_child = 'GHG_Nov_all'
 
 round_decimals = 4
+MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
 
 first_month_to_calculate = 1
 last_month_to_calculate  = 11

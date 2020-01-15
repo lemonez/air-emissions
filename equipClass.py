@@ -1,4 +1,4 @@
-import time, datetime, glob
+import time, datetime, glob, math
 import pandas as pd
 from collections import OrderedDict
 
@@ -438,21 +438,22 @@ class AnnualEquipment(object):
         return fuel
     
     def _parse_all_monthly_CEMS(self):
-        """Combine monthly CEMS data into annual, return pd.DataFrame."""
+        """Combine monthly CEMS data into annual, fill missing values, return pd.DataFrame."""
         """
         df structure: (WED Pt. x Timestamp)
         """
         CEMS_paths = self._subset_CEMS_filepaths()
-        
         monthly_CEMS = []
         for fpath in CEMS_paths:
             month = self._parse_monthly_CEMS(fpath)
             monthly_CEMS.append(month)
         annual_CEMS = (pd.concat(monthly_CEMS)
                          .sort_values(['ptag', 'tstamp'])
-                         .set_index('tstamp'))
-        annual_CEMS['val'] = annual_CEMS['val'].clip(lower=0)
-        return annual_CEMS
+                         .reset_index(drop=True))
+        filled_CEMS = self._fill_missing_with_average(annual_CEMS, cf.MAX_CEMS_TO_FILL)
+        filled_CEMS.set_index('tstamp', inplace=True)
+        filled_CEMS['val'] = filled_CEMS['val'].clip(lower=0)
+        return filled_CEMS
     
     def _subset_CEMS_filepaths(self):
         """Return list of filepaths to parse based on months specified in config file."""
@@ -477,6 +478,97 @@ class AnnualEquipment(object):
         # remove duplicate rows from daylight savings for 11/3/2019
         cems_df = cems_df[cems_df['tstamp'].dt.minute != 2]
         print('    parsed CEMS data in: '+path)
+        return cems_df
+    
+    @staticmethod
+    def _fill_missing_with_average(cems_df, max_consec_to_fill=cf.MAX_CEMS_TO_FILL):
+        """Fill missing hours with average of surrounding values; log filled hours."""
+        """
+        NOTE: Because the data is sorted by both PI tag and timestamp, it is not necessary
+        to separate by PI tag. Values from one PI tag will not be used to calculate averages
+        for another, because missing values at the boundary between PI tags (first and last
+        hour of the year) can only be filled manually.
+        """
+        flags_for_avg = ['PM', 'Calibration', 'Malfunction', 'CGA', 'Out of Control']
+        # list indices for all missing values
+        ixs_nan_all = list(cems_df[(cems_df['val'].isna()) & (cems_df['text_flag'].isin(flags_for_avg))].index)
+        # subset out indices with missing values from first and last hour of year
+
+        # separate consecutive missing indices into groups
+        consec_groups = {}
+        label = 0
+        consec_groups[label] = []
+        for iloc in range(len(ixs_nan_all)):
+            consec_groups[label].append(ixs_nan_all[iloc])
+            if iloc < len(ixs_nan_all) - 1:
+                if ixs_nan_all[iloc + 1] != ixs_nan_all[iloc] + 1:
+                    label += 1
+                    consec_groups[label] = []
+        # convert dict of lists to list of lists
+        consec_groups_list = [ixs for ixs in consec_groups.values()]
+
+        first = cems_df['tstamp'].min()
+        last = cems_df['tstamp'].max()
+        first_last = [first, last]
+        # subset out groups containing missing values in first or last hour of year
+        ixs_first_last = []
+        for group in consec_groups_list:
+            for ix in group:
+                if ix in first_last:
+                    ixs_first_last += group
+                    consec_groups_list.remove(group)
+                    
+        # subset based on threshold for max # of consecutive missing values to fill
+        ixs_GT_max_consec = []
+        ixs_LE_max_consec = []
+        for group in consec_groups_list:
+            if len(group) > max_consec_to_fill:
+                # flatten into one list for those not being filled
+                ixs_GT_max_consec += group
+            else:
+                # append to list of lists for those being filled
+                ixs_LE_max_consec.append(group)
+        
+        # store filling avgs for each index
+        fill_vals = {}
+        for group in ixs_LE_max_consec:
+            group = sorted(group) # ensure correct order
+            val_before = cems_df.loc[group[0] - 1,  'val']
+            val_after  = cems_df.loc[group[-1] + 1, 'val']
+            val_avg = (val_before + val_after) / 2
+            for ix in group:
+                fill_vals[ix] = val_avg
+
+        # fill missing values for those that pass the above filters
+        ixs_filled = []
+        ixs_not_filled_error = []
+        for ix, avg in fill_vals.items():
+            if math.isnan(avg):
+                ixs_not_filled_error.append(ix)
+            else:
+                cems_df.loc[ix, 'val'] = avg
+                ixs_filled.append(ix)
+        
+        ALL_not_filled = ixs_first_last + ixs_GT_max_consec + ixs_not_filled_error
+        """
+        ixs_nan_all # all missing values
+        ixs_filled # values filled programatically by averaging surrounding two non-NULL values
+        ixs_first_last # missing first and last hours of year; must fill manually
+        ixs_GT_max_consec # count of consecutive missing rows above threshold; must fill manually
+        ixs_not_filled_error # catchall for anything else that could not be filled; must fill manually
+        ALL_not_filled # any values that couldn't be filled programatically
+        """
+        for ixs, outfile in zip(
+            [ixs_filled, ixs_first_last, ixs_GT_max_consec, ixs_not_filled_error, ALL_not_filled],
+            ['missing_filled', 'missing_first_last', 'missing_above_threshold',
+             'missing_NOT_filled_error', 'missing_NOT_filled_ALL']
+                               ):
+            (cems_df.loc[ixs]
+                    .sort_values(by=['ptag', 'tstamp'])
+                    .to_csv(cf.log_dir+outfile+'.csv', index=False))
+        print('  **Filled {} out of {} missing CEMS hours. Check {} for missing hours to fill manually.'.format(
+               str(len(ixs_filled)), str(len(ixs_nan_all)), cf.log_dir))
+        cems_df.drop(columns='text_flag', inplace=True)
         return cems_df
     
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
