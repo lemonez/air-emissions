@@ -13,7 +13,7 @@ data_dir      = './data_'+str(data_year)+'/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'criteria_2019_all_equips'
+out_dir_child = 'CorpEmis_2019_all_equips'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
@@ -65,11 +65,11 @@ equip_to_calculate = [
 pollutants_to_calculate = [
                            # criteria
                            'NOx',
-                           'CO',
+#                          'CO',
                            'SO2',
                            'VOC',
-                           'PM', 'PM25', 'PM10',
-                           'H2SO4',
+#                          'PM', 'PM25', 'PM10',
+#                          'H2SO4',
 #                           'CO2'
                            ]
 if GHG:
