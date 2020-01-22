@@ -9,18 +9,93 @@ import pandas as pd
 
 #### configure data/calculations ####
 data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
-data_dir      = './data_'+str(data_year)+'/'
+data_dir      = './data_'+str(data_year)+'/' # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'CorpEmis_2019_all_equips'
+out_dir_child = 'test'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
 
-first_month_to_calculate = 1
+first_month_to_calculate = 11
 last_month_to_calculate  = 12
 GHG = False
+
+# directories
+annual_prefix  = data_dir+'annual/' # data that changes monthly/annually
+static_prefix  = data_dir+'static/' # static data
+CEMS_dir       = annual_prefix+'CEMS/' # monthly CEMS data
+
+if data_year == 2019:
+    # files
+    fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
+    fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
+    fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
+    fname_EFs      = 'EFs_monthly_Dec.xlsx'    # monthly-EF excel workbook
+    fname_analyses = str(data_year)+'_analyses_agg_Dec.xlsx'   # all gas lab-test data
+    fname_ewcoker  = str(data_year)+'_data_EWcoker_Dec.xlsx'   # coker CEMS, fuel, flow data
+    fname_fuel     = str(data_year)+'_usage_fuel_Dec.xlsx'     # annual fuel usage for all equipment
+    fname_coke     = str(data_year)+'_usage_coke_Dec.xlsx'     # annual coke usage for calciners
+    fname_flarefuel= str(data_year)+'_usage_flarefuel_Dec.xlsx'# annual flare-fuel through H2-plant flare
+    fname_h2stack  = str(data_year)+'_flow_h2stack_Dec.xlsx'   # annual H2-stack flow data
+    fname_PSAstack = str(data_year)+'_flow_PSAoffgas_Dec.xlsx' # PSA offgas flow data for #2 H2 Plant
+    fname_flareEFs = str(data_year)+'_EFs_flare.xlsx'          # EFs for H2 flare
+    fname_toxicsEFs= str(data_year)+'_EFs_toxics.xlsx'         # EFs for toxics
+    fname_toxicsEFs_calciners = str(data_year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics
+    
+    labtab_NG       = '#2H2FdNatGas 2019'  # NG-sample lab-test data
+    labtab_RFG      = 'RFG 2019'           # RFG-sample lab-test data
+    labtab_cokerFG  = 'Coker FG 2019'      # cokerFG-sample lab-test data
+    labtab_CVTG     = 'CVTG 2019'          # CVTG-sample lab-test data
+    labtab_flare    = '#2H2 Flare 2019'    # flare-gas sample lab-test data
+    labtab_PSA      = 'PSA Offgas 2019'    # PSA-Offgas sample lab-test data
+    
+    sheet_fuel = '12-19'
+
+elif data_year == 2018:
+
+    # files
+    fname_eqmap    = 'equipmap.csv'            # all equipment names / IDs    
+    fname_NG_chem  = 'chemicals_NG.csv'        # NG static chemical data    
+    fname_FG_chem  = 'chemicals_FG.csv'        # FG static chemical data
+    fname_EFs      = 'EFs_monthly.xlsx'        # monthly-EF excel workbook
+    fname_analyses = str(data_year)+'_analyses_agg.xlsx'   # all gas lab-test data
+    fname_ewcoker  = str(data_year)+'_data_EWcoker_DUMMY.xlsx'   # coker CEMS, fuel, flow data
+    fname_fuel     = str(data_year)+'_usage_fuel.xlsx'     # annual fuel usage for all equipment
+    fname_coke     = str(data_year)+'_usage_coke.xlsx'     # annual coke usage for calciners
+    fname_flarefuel= str(data_year)+'_usage_flarefuel.xlsx'# annual flare-fuel through H2-plant flare
+    fname_h2stack  = str(data_year)+'_flow_h2stack.xlsx'   # annual H2-stack flow data
+    fname_PSAstack = str(data_year)+'_flow_PSAoffgas_2019COPY.xlsx' # PSA offgas flow data for #2 H2 Plant
+    fname_flareEFs = str(data_year)+'_EFs_flare.xlsx'# EFs for H2 flare
+    fname_toxicsEFs= str(data_year)+'_EFs_toxics.xlsx'     # EFs for toxics
+    fname_toxicsEFs_calciners = str(data_year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics     
+
+    labtab_NG       = '#2H2FdNatGas 2018'  # NG-sample lab-test data
+    labtab_RFG      = 'RFG 2018'           # RFG-sample lab-test data
+    labtab_cokerFG  = 'Coker FG 2018'      # cokerFG-sample lab-test data
+    labtab_CVTG     = 'CVTG 2018'          # CVTG-sample lab-test data
+    labtab_flare    = '#2H2 Flare 2018'    # flare-gas sample lab-test data
+    labtab_PSA      = 'PSA Offgas 2018'    # PSA-Offgas sample lab-test data
+
+    sheet_fuel = '10-18'
+
+#paths    
+fpath_eqmap    = static_prefix+fname_eqmap
+fpath_NG_chem  = static_prefix+fname_NG_chem
+fpath_FG_chem  = static_prefix+fname_FG_chem
+fpath_EFs      = annual_prefix+fname_EFs
+fpath_analyses = annual_prefix+fname_analyses
+fpath_ewcoker  = annual_prefix+fname_ewcoker
+fpath_fuel     = annual_prefix+fname_fuel
+fpath_coke     = annual_prefix+fname_coke
+fpath_flarefuel= annual_prefix+fname_flarefuel
+fpath_h2stack  = annual_prefix+fname_h2stack
+fpath_PSAstack = annual_prefix+fname_PSAstack
+fpath_flareEFs = annual_prefix+fname_flareEFs
+fpath_toxicsEFs= annual_prefix+fname_toxicsEFs
+fpath_toxicsEFs_calciners = annual_prefix+fname_toxicsEFs_calciners
+    
 
 ################################################################################
 ################################################################################
