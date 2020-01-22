@@ -13,61 +13,68 @@ data_dir      = './data_'+str(data_year)+'/'
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'GHG_Nov_all'
+out_dir_child = 'criteria_2019_all_equips'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
 
 first_month_to_calculate = 1
-last_month_to_calculate  = 11
+last_month_to_calculate  = 12
+GHG = False
 
+################################################################################
+################################################################################
 
 # just to be explicit: this is the offset for accessing tstamp intervals
 month_offset = first_month_to_calculate
+
 equip_to_calculate = [
- #                    'crude_vtg',
- #                    'crude_rfg',
- #                    'n_vac',
- #                    's_vac',
- #                    'ref_heater_1',
- #                    'ref_heater_2',
- #                    'naptha_heater',
- #                    'naptha_reboiler',
- #                    'dhds_heater_3',
- #                    'hcr_1',
- #                    'hcr_2',
- #                    'rxn_r_1',
- #                    'rxn_r_4',
- #                    'coker_1',
- #                    'coker_2',
+                      'crude_vtg',
+                      'crude_rfg',
+                      'n_vac',
+                      's_vac',
+                      'ref_heater_1',
+                      'ref_heater_2',
+                      'naptha_heater',
+                      'naptha_reboiler',
+                      'dhds_heater_3',
+                      'hcr_1',
+                      'hcr_2',
+                      'rxn_r_1',
+                      'rxn_r_4',
+                      'coker_1',
+                      'coker_2',
                       'coker_e',
                       'coker_w',
- #                    'h2_plant_2',
- #                    'dhds_heater_1',
- #                    'dhds_reboiler_1',
- #                    'dhds_heater_2',
- #                    'h_furnace_n',
- #                    'h_furnace_s',
- #                    'calciner_1',
- #                    'calciner_2',
- #                    'iht_heater',
- #                    'boiler_4',
- #                    'boiler_5',
- #                    'boiler_6',
- #                    'boiler_7',
- #                    'h2_flare',
+                      'h2_plant_2',
+                      'dhds_heater_1',
+                      'dhds_reboiler_1',
+                      'dhds_heater_2',
+                      'h_furnace_n',
+                      'h_furnace_s',
+                      'calciner_1',
+                      'calciner_2',
+                      'iht_heater',
+                      'boiler_4',
+                      'boiler_5',
+                      'boiler_6',
+                      'boiler_7',
+                      'h2_flare',
                       ]
 
 pollutants_to_calculate = [
                            # criteria
-#                           'NOx',
-#                           'CO',
-#                           'SO2,
-#                           'VOC',
-#                           'PM', 'PM25', 'PM10',
-#                           'H2SO4',
-                            'CO2'
+                           'NOx',
+                           'CO',
+                           'SO2',
+                           'VOC',
+                           'PM', 'PM25', 'PM10',
+                           'H2SO4',
+#                           'CO2'
                            ]
+if GHG:
+    equip_to_calculate = ['coker_e','coker_w']
+    pollutants_to_calculate = ['CO2']
 
 we_are_calculating_toxics = False
 calciner_toxics = False
