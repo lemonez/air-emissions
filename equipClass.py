@@ -1054,7 +1054,7 @@ class MonthlyCoker(AnnualCoker):
                                 'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
                                 'co' : (28   * 1.557E-7 / 60), # 7.277e-08
                                 'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
-                              }
+                             }
             ptags_list = self.equip_ptags[self.unit_key]
             cems_pol_list = [self.ptags_pols[tag] for tag in ptags_list
                              if self.ptags_pols[tag]
@@ -1389,7 +1389,7 @@ class AnnualCalciner(AnnualEquipment):
             coke_df.replace({"[-11059] No Good Data For Calculation": pd.np.nan},
                                                                     inplace=True)
         # change STPD --> STPH
-        coke_df = coke_df/24                                                                    
+        coke_df = coke_df/24
         coke_df = coke_df.clip(lower=0)
         return coke_df
         
