@@ -566,7 +566,7 @@ class AnnualEquipment(object):
         equip_df = self._parse_equip_map()
         # subset to exclude H2S and others
         sub = (equip_df[equip_df['param'].isin(['nox', 'so2', 'co', 'o2',
-                                                'so2_lo', 'so2_hi',
+                                                'so2_lo', 'so2_hi', 'no', 'no2'
                                                 #'co2'
                                                 ])]
                                              .loc[:,['ptag','unit_key']]
@@ -1056,17 +1056,17 @@ class MonthlyCoker(AnnualCoker):
                                 'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
                              }
             ptags_list = self.equip_ptags[self.unit_key]
-            cems_pol_list = [self.ptags_pols[tag] for tag in ptags_list
-                             if self.ptags_pols[tag]
-                                 not in ['o2_%', 'so2_lo_ppm', 'so2_hi_ppm']]
-            cems_pol_list += ['so2_ppm']
+            cems_pol_list = ['nox_ppm', 'co_ppm', 'so2_ppm']
+                    # cems_pol_list = [self.ptags_pols[tag] for tag in ptags_list
+                                     # if self.ptags_pols[tag]
+                                         # not in ['o2_%', 'so2_lo_ppm', 'so2_hi_ppm']]
+                    # cems_pol_list += ['so2_ppm']
             for pol in cems_pol_list:
                 both_df[pol.split('_')[0]] = (
                                         both_df[pol]
                                         * ppm_conv_facts[pol.split('_')[0]]
                                         * both_df['dscfh'])
             return both_df
-
 
 #TODO: move these to annual level
     # - will need to deal with the fact that we don't have yearly data for both datasets
@@ -1120,7 +1120,9 @@ class MonthlyCoker(AnnualCoker):
                                    columns="ptag",
                                    values="val")
                             .rename(columns=self.ptags_pols))
-
+            sub_pivot['nox_ppm'] = sub_pivot['no_ppm'] + sub_pivot['no2_ppm']
+            sub_pivot.drop(columns=['no_ppm', 'no2_ppm'], inplace=True)                            
+            
             # replace 'lo so2' value with 'hi so2' value if 'hi so2' not null
             mask = sub_pivot['so2_lo_ppm'].isna() & sub_pivot['so2_hi_ppm'].notna()
             sub_pivot['so2_ppm'] = sub_pivot['so2_lo_ppm']

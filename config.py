@@ -13,12 +13,12 @@ data_dir      = './data_'+str(data_year)+'/' # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'test'
+out_dir_child = 'CorpEmis_2019_all_equips'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
 
-first_month_to_calculate = 11
+first_month_to_calculate = 1
 last_month_to_calculate  = 12
 GHG = False
 
