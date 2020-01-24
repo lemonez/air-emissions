@@ -880,7 +880,7 @@ class AnnualEquipment(object):
         """Pass pollutant name, return float multiplier to convert emissions to lbs."""
         if (self.EFunits.loc[self.unit_key]
                         .loc[pol].loc['units'] == 'lb/mmbtu'):
-            if self.unit_key in ['coker_1', 'coker_2']:
+            if self.unit_key in ['coker_1', 'coker_2', 'coker_e', 'coker_w']:
                 multiplier = 1/1000 * self.HHV_cokerFG
             elif self.unit_key == 'crude_vtg':
                 multiplier = 1/1000 * self.HHV_CVTG
@@ -1053,7 +1053,7 @@ class MonthlyCoker(AnnualCoker):
         self.ts_interval    = self.annual_equip.ts_intervals[self.month
                                                 - self.annual_equip.month_offset]
 
-#         self.EFs            = self.annual_equip.EFs[self.month][0]
+        self.EFs            = self.annual_equip.EFs[self.month][0]
         self.EFunits        = self.annual_equip.EFs[self.month][1]
         self.equip_EF       = self.annual_equip.EFs[self.month][2]
         self.col_name_order = self.annual_equip.col_name_order
@@ -1096,12 +1096,54 @@ class MonthlyCoker(AnnualCoker):
         monthly.rename(index={'cokerfg_mscfh': 'fuel_rfg',
                               'pilot_mscfh'  : 'fuel_ng'},
                               inplace=True)
-        # set other values in series to 0 for now (only calc'ing SO2)
-        monthly.loc['voc'] = 0
-        monthly.loc['pm'] = 0
-        monthly.loc['pm25'] = 0
-        monthly.loc['pm10'] = 0
-        monthly.loc['h2so4'] = 0 # monthly.loc['so2'] * 0.026
+        if (self.annual_equip.year == 2019 
+            and (
+                 self.month >= 4 and self.unit_key == 'coker_e'
+                 ) or (
+                 self.month >= 5 and self.unit_key == 'coker_w'
+                 )
+            ):
+                for pol in ['nox', 'co', 'so2', 'voc', 'pm', 'pm25', 'pm10']:
+                    # if no CEMS
+                    if pol not in monthly.index:
+                        # need this logic to avoid errors while PM25 & PM 10 EFs are added
+                        if pol not in self.EFunits.loc[self.unit_key].index:
+                            monthly.loc[pol] = -9999 * 2000 / 12 # error flag that will show up as -9999
+                        else:
+                            if (self.EFunits.loc[self.unit_key]
+                                            .loc[pol]
+                                            .loc['units'] == 'lb/hr'):
+                                # don't multiply by fuel quantity if EF is in lb/hr
+                                EF_multiplier = 1
+                            else:
+                                fuel_type = 'fuel_ng'
+                                EF_multiplier = monthly.loc[fuel_type]
+
+                                monthly.loc[pol] = (EF_multiplier
+                                                * self.equip_EF[self.unit_key][pol]
+                                                * self.get_conversion_multiplier(pol))
+    # TODO: refactor this hacky temp workaround...
+            # add in VOC from nat gas fuel flow
+            # use emission factors from 'h2_plant_2'
+                efs = self.EFs
+                ng_voc_ef    = efs[(efs['unit_id'] == '46') &
+                                   (efs['pollutant'] == 'voc')
+                                  ].loc[:,'ef'].iloc[0]
+                ng_voc_units = efs[(efs['unit_id'] == '46') &
+                                   (efs['pollutant'] == 'voc')
+                                  ].loc[:,'units'].iloc[0]
+                if ng_voc_units == 'lb/mmscf':
+                    monthly['voc'] = monthly['voc'] + (monthly['fuel_ng']
+                                                        * ng_voc_ef / 1000)
+                else:
+                    print('***WARNING: VOC emission factor not in lb/mmscf***')
+            # monthly.loc['h2so4'] = 0 # monthly.loc['so2'] * 0.026
+        else:
+            monthly.loc['pm']    = 0
+            monthly.loc['pm25']  = 0
+            monthly.loc['pm10']  = 0
+            monthly.loc['voc']   = 0
+            monthly.loc['h2so4'] = 0
         monthly.loc['equipment'] = self.unit_key
         monthly.loc['month'] = self.month
         monthly = monthly.reindex(self.col_name_order)
