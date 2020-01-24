@@ -611,7 +611,7 @@ class AnnualEquipment(object):
                 # .rename_axis('ptag', axis=0))
         return equip_info
     
-    def generate_date_range(self):
+    def _generate_date_range(self):
         """Generate pd.date_range to fill timestamps."""
         tsi = self._generate_ts_interval_list()
         s_tstamp = tsi[0][0]
@@ -635,7 +635,9 @@ class AnnualEquipment(object):
 # TODO: refactor this method; it is a hot mess
     def calculate_monthly_equip_emissions(self):
         """Return pd.Series of equipment unit emissions for specified month."""
-        hourly = self.convert_from_ppm()
+        hourly = self.merge_fuel_and_CEMS()
+        if self.unit_key in self.equip_ptags.keys():
+            hourly = self.convert_from_ppm(hourly)
         monthly = hourly.sum()
         # calculate all pollutants except for H2SO4
         if 'calciner' in self.unit_key:
@@ -697,70 +699,68 @@ class AnnualEquipment(object):
 # end temporary workaround
         
         return monthly
+
  #TODO: refactor into 'convert_from_ppm' and 'convert_from_mscfh' methods   
-    def convert_from_ppm(self):
+    def convert_from_ppm(both_df):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
-        both_df = self.merge_fuel_and_CEMS()
- #TODO: if this is the only branch of the logic, move 'if' statement to caller
-        if self.unit_key in self.equip_ptags.keys():
-            if self.unit_key == 'h2_plant_2':
-                h2stack_df    = self.get_monthly_h2stack()
-                PSAstack_df = self.get_monthly_PSAstack()
-                stacks_df = pd.concat([h2stack_df, PSAstack_df], axis=1) # stacks on stacks on stacks
-                
-                stacks_df['PSA_flow'] = (stacks_df['46FC36.PV']
-                                     * 1000
-                                     * self.HHV_PSA
-                                     / 1000000
-                                     * self.f_factor_PSA
-                                     / 1000)
-                stacks_df['NG_flow']  = ((stacks_df['46FI187.PV'] + stacks_df['46FS38.PV'])
-                                     * 1000
-                                     * self.HHV_NG
-                                     / 1000000
-                                     * self.f_factor_NG
-                                     / 1000)
-                
-                # combine with fuel, correct for O2
-                both_df = pd.concat([both_df, stacks_df], axis=1)
-                both_df['dscfh'] = ((both_df['PSA_flow'] + both_df['NG_flow'])
-                                    * 20.9 / (20.9 - both_df['o2_%']))
-            else:
-                fuel_type = 'fuel_rfg'
-                f_factor  = self.f_factor_RFG
-                HHV       = self.HHV_RFG
-                
-                both_df['dscfh'] = (both_df[fuel_type]
-                                    * 1000 
-                                    * HHV
-                                    / 1000000
-                                    * f_factor
-                                    * 20.9 / (20.9 - both_df['o2_%']))
+        if self.unit_key == 'h2_plant_2':
+            h2stack_df    = self.get_monthly_h2stack()
+            PSAstack_df = self.get_monthly_PSAstack()
+            stacks_df = pd.concat([h2stack_df, PSAstack_df], axis=1) # stacks on stacks on stacks
+            
+            stacks_df['PSA_flow'] = (stacks_df['46FC36.PV']
+                                 * 1000
+                                 * self.HHV_PSA
+                                 / 1000000
+                                 * self.f_factor_PSA
+                                 / 1000)
+            stacks_df['NG_flow']  = ((stacks_df['46FI187.PV'] + stacks_df['46FS38.PV'])
+                                 * 1000
+                                 * self.HHV_NG
+                                 / 1000000
+                                 * self.f_factor_NG
+                                 / 1000)
+            
+            # combine with fuel, correct for O2
+            both_df = pd.concat([both_df, stacks_df], axis=1)
+            both_df['dscfh'] = ((both_df['PSA_flow'] + both_df['NG_flow'])
+                                * 20.9 / (20.9 - both_df['o2_%']))
+        else:
+            fuel_type = 'fuel_rfg'
+            f_factor  = self.f_factor_RFG
+            HHV       = self.HHV_RFG
+            
+            both_df['dscfh'] = (both_df[fuel_type]
+                                * 1000 
+                                * HHV
+                                / 1000000
+                                * f_factor
+                                * 20.9 / (20.9 - both_df['o2_%']))
 # would like to break this into another method so that 
 # calculate_calciner_total_stack_flow() does not need a df passed to it as an arg
 # right now it is difficult to test, and this method is too nested
-            # if there are CEMS pols to convert)
-            if 'calciner' in self.unit_key:
-                both_df = self.calculate_calciner_total_stack_flow(both_df)
-            
-            ppm_conv_facts = {
-                             #       MW      const   hr/min
-                             'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
-                             'co' : (28   * 1.557E-7 / 60), # 7.277e-08
-                             'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
-                              }
-            
-            ptags_list = self.equip_ptags[self.unit_key]
-            cems_pol_list = [self.ptags_pols[tag]
-                             for tag in ptags_list
-                             if self.ptags_pols[tag] != 'o2_%']
-            for pol in cems_pol_list:
-                both_df[pol.split('_')[0]] = (
-                                        both_df[pol]
-                                        * ppm_conv_facts[pol.split('_')[0]]
-                                            # ==> lb/scf
-                                        * both_df['dscfh'])
-                                            # ==> lb
+        # if there are CEMS pols to convert)
+        if 'calciner' in self.unit_key:
+            both_df = self.calculate_calciner_total_stack_flow(both_df)
+        
+        ppm_conv_facts = {
+                         #       MW      const   hr/min
+                         'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
+                         'co' : (28   * 1.557E-7 / 60), # 7.277e-08
+                         'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
+                          }
+        
+        ptags_list = self.equip_ptags[self.unit_key]
+        cems_pol_list = [self.ptags_pols[tag]
+                         for tag in ptags_list
+                         if self.ptags_pols[tag] != 'o2_%']
+        for pol in cems_pol_list:
+            both_df[pol.split('_')[0]] = (
+                                    both_df[pol]
+                                    * ppm_conv_facts[pol.split('_')[0]]
+                                        # ==> lb/scf
+                                    * both_df['dscfh'])
+                                        # ==> lb
         return both_df
 
     def merge_fuel_and_CEMS(self):
@@ -768,6 +768,7 @@ class AnnualEquipment(object):
         return pd.concat([self.get_monthly_fuel(),
                           self.get_monthly_CEMS()],
                           axis=1)
+
 # TODO : refactor next two funcs into one    
     def get_monthly_h2stack(self):
         """Return pd.DataFrame of emis unit stack flow for specified month."""
@@ -1180,7 +1181,7 @@ class AnnualCoker_CO2(AnnualEquipment):
     def unmerge_annual_ewcoker(self):
         """Unmerge E/W coker data."""
         merged_df = self.implement_pilot_gas_logic()
-        merged_df = merged_df.reindex(self.annual_equip.generate_date_range())
+        merged_df = merged_df.reindex(self.annual_equip._generate_date_range())
 
         e_cols = []
         w_cols = []
