@@ -638,6 +638,11 @@ class AnnualEquipment(object):
         hourly = self.merge_fuel_and_CEMS()
         if self.unit_key in self.equip_ptags.keys():
             hourly = self.convert_from_ppm(hourly)
+        # workaround for n_vac NOx CEMS transition
+        if self.unit_key == 'n_vac' and self.month < 5:
+            hourly = pd.concat([self.get_monthly_fuel(),
+                                pd.DataFrame({'no_CEMS_data' : []})],
+                                axis=1)
         monthly = hourly.sum()
         # calculate all pollutants except for H2SO4
         if 'calciner' in self.unit_key:
@@ -700,8 +705,65 @@ class AnnualEquipment(object):
         
         return monthly
 
- #TODO: refactor into 'convert_from_ppm' and 'convert_from_mscfh' methods   
-    def convert_from_ppm(both_df):
+    def calculate_monthly_nvac_emissions_2019(self):
+        """Return pd.Series of nvac emissions for specified month."""
+        if self.unit_key != 'n_vac':
+            return('ERROR')
+        # all complete months with or without NOx CEMS -- normal control path
+        if self.month != 5:
+            return (self.calculate_monthly_equip_emissions())
+        # NOx CEMS implemented mid-way through month
+        elif self.annual_equip.year == 2019 and self.month == 5:
+            hourly = self.merge_fuel_and_CEMS() 
+            # pre-CEMS implementation
+            pre  = hourly.copy().loc[:'2019-05-12 14:00:00' ]
+            # post-CEMS implementation
+            post = hourly.copy().loc[ '2019-05-12 15:00:00':]
+            post = self.convert_from_ppm(post)
+
+            subsets = []
+            for subset in [pre, post]:
+                monthly = subset.sum()
+                # calculate all pollutants except for H2SO4
+                for pol in ['nox', 'co', 'so2', 'voc', 'pm', 'pm25', 'pm10']:
+                    # if no CEMS
+                    if pol not in monthly.index:
+                        if (self.EFunits.loc[self.unit_key]
+                                        .loc[pol]
+                                        .loc['units'] == 'lb/hr'):
+                            # don't multiply by fuel quantity if EF is in lb/hr
+                            EF_multiplier = 1
+                        else:
+                            if self.unit_key == 'h2_plant_2':
+                                fuel_type = 'fuel_ng'
+                            else:
+                                fuel_type = 'fuel_rfg'
+
+                            EF_multiplier = monthly.loc[fuel_type]
+
+                        monthly.loc[pol] = (EF_multiplier
+                                            * self.equip_EF[self.unit_key][pol]
+                                            * self.get_conversion_multiplier(pol))
+
+                # now calculate H2SO4 separately
+                monthly.loc['h2so4'] = monthly.loc['so2'] * 0.026
+
+                # set other values in series
+                monthly.loc['equipment'] = self.unit_key
+                monthly.loc['month'] = self.month
+                monthly = monthly.reindex(self.col_name_order)
+                monthly.loc[self.col_name_order[4:-1]] = monthly.loc[
+                                        self.col_name_order[4:-1]] / 2000 # lbs --> tons
+                subsets.append(monthly)
+            # sum values from before and after NOx CEMS is up and running
+            whole = pd.concat(subsets, axis=1).sum(axis=1)
+            whole['equipment'] = 'n_vac'
+            whole['month'] = int(whole['month'] / 2)
+            return whole        
+        return monthly
+
+#TODO: refactor into 'convert_from_ppm' and 'convert_from_mscfh' methods   
+    def convert_from_ppm(self, both_df):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
         if self.unit_key == 'h2_plant_2':
             h2stack_df    = self.get_monthly_h2stack()
@@ -958,7 +1020,10 @@ class MonthlyHB(AnnualHB):
                                             self.annual_equip.fpath_FG_chem,
                                             self.ts_interval)
         
-        self.monthly_emis   = self.calculate_monthly_equip_emissions()
+        if self.unit_key == 'n_vac' and self.annual_equip.year == 2019:
+            self.monthly_emis = self.calculate_monthly_nvac_emissions_2019()
+        else:
+            self.monthly_emis   = self.calculate_monthly_equip_emissions()
 
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data for new (2019+) cokers."""
