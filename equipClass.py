@@ -831,7 +831,8 @@ class AnnualEquipment(object):
                           self.get_monthly_CEMS()],
                           axis=1)
 
-# TODO : refactor next two funcs into one    
+# TODO : delete this function; H2stack was a conservative estimate and now we are
+#        calculating stack flow based on PSAstack  
     def get_monthly_h2stack(self):
         """Return pd.DataFrame of emis unit stack flow for specified month."""
         month_stack = (self.h2stack_annual.loc[
