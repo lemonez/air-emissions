@@ -15,8 +15,8 @@ class AnnualParser(object):
     aggregating, slicing and dicing, formatting, and writing CSV output.
     """
     # output options
-    write_csvs=True
-    return_dfs=True
+    write_csvs = True
+    return_dfs = True
     
     def __init__(self, annual_equip):
         """Constructor for handling inputs, calculations, and outputs."""
@@ -66,8 +66,9 @@ class AnnualParser(object):
         for pol in drop_pollutants:
             annual_df.drop(columns=pol, inplace=True)
 #TODO: refactor to create MultiIndex from existing columns, not based on config file; less error-prone
-        # create MultiIndex for renaming columns
+        # if not calculating toxics
         if not self.is_toxics:
+            # create MultiIndex for renaming columns
             if 'CO2' not in cf.pollutants_to_calculate:
                 arr_col_lev0 = ['Refinery Fuel Gas', 'Natural Gas']
                 arr_col_lev1 = ['mscf'] * 2
@@ -82,19 +83,20 @@ class AnnualParser(object):
                     #arr_col = [['Refinery Fuel Gas', 'Natural Gas',
                     #            'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4'],
                     #           (['mscf'] * 2) + (['tons'] * 7) + (['lbs'] * 1)]
-
             elif 'CO2' in cf.pollutants_to_calculate:
                 arr_col = [['Combined Fuel Gas', 'CO2'],
                            (['mscf'] * 1) + (['tons'] * 1)]
-#        else:
-#            if not self.is_calciner_toxics:
-#                arr_col = [['Refinery Fuel Gas', 'Natural Gas'] + cf.toxics_with_EFs,
-#                           (['mscf'] * 2) + (['lbs'] * len(cf.toxics_with_EFs))]
-#            else:
-#                arr_col = [['Calcined Coke'] + cf.calciner_toxics_with_EFs,
-#                           (['tons'] * 1) + (['lbs'] * len(cf.calciner_toxics_with_EFs))]
-#        
-
+        # if calculating toxics
+        else:
+            # if calculating toxics but not calciner toxics
+            if not self.is_calciner_toxics:
+               arr_col = [['Refinery Fuel Gas', 'Natural Gas'] + cf.toxics_with_EFs,
+                          (['mscf'] * 2) + (['lbs'] * len(cf.toxics_with_EFs))]
+            # if calculating calciner toxics
+            else:
+               arr_col = [['Calcined Coke'] + cf.calciner_toxics_with_EFs,
+                          (['tons'] * 1) + (['lbs'] * len(cf.calciner_toxics_with_EFs))]
+        
         MI_col = pd.MultiIndex.from_arrays(arr_col, names=('Parameter', 'Units'))
             # df.index.names = (['Quarter', 'Equipment']) ; q_gb.head()
             # not sure if the tuple is necessary, can just pass a list

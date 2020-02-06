@@ -49,7 +49,6 @@ def main():
             os.makedirs(dir)
             print('Created directory \''+dir+'\' for output files.\n')
     
-    
     if cf.view_config:
         import sys
         sys.exit(0)

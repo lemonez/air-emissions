@@ -125,10 +125,10 @@ class AnnualEquipment(object):
         print('  parsing emission factor data')
         self.flareEFs       = self._parse_annual_flare_EFs()
                              # df: EFs for flare gas
-        #self.toxicsEFs      = self.parse_annual_toxics_EFs()
-        #                     # df: EFs for toxics
-        #self.toxicsEFs_calciners = self.parse_annual_calciner_toxics_EFs()
-        #                     # df: EFs for calciner toxics
+        self.toxicsEFs      = self.parse_annual_toxics_EFs()
+                            # df: EFs for toxics
+        self.toxicsEFs_calciners = self.parse_annual_calciner_toxics_EFs()
+                            # df: EFs for calciner toxics
         self.EFs            = self._parse_annual_EFs()
                              # dict: {integer month: (EFs df, EFunits df, equip_EF_dict)}
         print('    parsed emission factor data')
@@ -241,7 +241,7 @@ class AnnualEquipment(object):
         # treat it the same; could add exception for boiler #5
         # in the future but not necessary for 2018 emissions
         toxics = toxics.iloc[:-1]
-        toxics.rename(columns={'Chemical Name':'pollutant',
+        toxics.rename(columns={'Chemical Name': 'pollutant',
                                'ICR - EF'     : 'ef',
                                'EF Units'     : 'units'},
                       inplace=True)

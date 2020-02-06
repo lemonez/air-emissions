@@ -8,19 +8,25 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
+first_month_to_calculate = 1
+last_month_to_calculate  = 12
 data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/' # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = 'CorpEmis_2019_all_equips'
+out_dir_child = '2019_toxicsDev'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
 
-first_month_to_calculate = 1
-last_month_to_calculate  = 12
+# calculate GHG?
 GHG = False
+
+# calculate toxics?
+we_are_calculating_toxics = True
+calciner_toxics = False
+calculate_PM_fractions = False
 
 # directories
 annual_prefix  = data_dir+'annual/' # data that changes monthly/annually
@@ -150,11 +156,6 @@ pollutants_to_calculate = [
 if GHG:
     equip_to_calculate = ['coker_e','coker_w']
     pollutants_to_calculate = ['CO2']
-
-we_are_calculating_toxics = False
-calciner_toxics = False
-calculate_PM_fractions = False
-
 
 #### configure formatting and logging ####
 # select month format for output; defaults to name abbreviations
