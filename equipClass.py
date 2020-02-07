@@ -830,7 +830,7 @@ class AnnualEquipment(object):
         return pd.concat([self.get_monthly_fuel(),
                           self.get_monthly_CEMS()],
                           axis=1)
-
+    
 # TODO : delete this function; H2stack was a conservative estimate and now we are
 #        calculating stack flow based on PSAstack  
     def get_monthly_h2stack(self):
@@ -876,7 +876,7 @@ class AnnualEquipment(object):
 
         df2['dscfh'] = df2['WESP_flow'] + df2['dscfh']
         return df2    
-
+    
     def get_conversion_multiplier(self, pol):
         """Pass pollutant name, return float multiplier to convert emissions to lbs."""
         if (self.EFunits.loc[self.unit_key]
@@ -924,7 +924,7 @@ class AnnualEquipment(object):
         else: # empty df if no CEMS
             no_CEMS = pd.DataFrame({'no_CEMS_data' : []})
             return no_CEMS        
-
+    
     def get_monthly_coke(self):
         """Return pd.DataFrame of emis unit coke usage for specified month."""
         month_coke = (self.coke_annual.loc[
@@ -978,6 +978,40 @@ class AnnualEquipment(object):
             fuel_df['fuel_ng'] = 0
         return fuel_df
 
+#### BEGIN: methods for calculating toxics
+
+    def calculate_monthly_toxics(self, monthly_emis):
+        """Calculate series of monthly toxics for given emissions unit."""
+        base_ser = monthly_emis[:4]
+        mult = (base_ser.loc[self.get_fuel_type_for_toxics()]
+                * self.get_HHV_multiplier_for_toxics())
+        tox = self.toxicsEFs.copy()
+        tox.set_index('pollutant', inplace=True)
+        tox['lbs'] = tox['ef'] * mult
+        tox_ser = pd.concat([base_ser, tox['lbs']])
+        return tox_ser
+    
+    def get_fuel_type_for_toxics(self):
+        """Return string indicating fuel type to use for calculating toxics."""
+        if self.unit_key == 'h2_plant_2':
+            return 'fuel_ng'
+        else:
+            return 'fuel_rfg'
+    
+    def get_HHV_multiplier_for_toxics(self):
+        """Return HHV multiplier to convert mscf to mmBtu."""
+        if self.unit_key in ['coker_1', 'coker_2', 'coker_e', 'coker_w']:
+            HHV_multiplier = 1/1000 * self.HHV_cokerFG
+        elif self.unit_key == 'crude_vtg':
+            HHV_multiplier = 1/1000 * self.HHV_CVTG
+        elif self.unit_key == 'h2_flare':
+            HHV_multiplier = 1/1000 * self.HHV_flare
+        else:
+            HHV_multiplier = 1/1000 * self.HHV_RFG
+        return HHV_multiplier
+
+#### END: methods for calculating toxics
+        
 class AnnualHB(AnnualEquipment):
     """Parse and store annual heater/boiler data."""
     def __init__(self, annual_equip):
@@ -1004,6 +1038,7 @@ class MonthlyHB(AnnualHB):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
+        self.toxicsEFs      = self.annual_equip.toxicsEFs
         
         # fuel-sample lab results (pd.DataFrame)
         self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
@@ -1025,6 +1060,7 @@ class MonthlyHB(AnnualHB):
             self.monthly_emis = self.calculate_monthly_nvac_emissions_2019()
         else:
             self.monthly_emis   = self.calculate_monthly_equip_emissions()
+        self.monthly_toxics = self.calculate_monthly_toxics(self.monthly_emis)
 
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data for new (2019+) cokers."""
@@ -1033,7 +1069,7 @@ class AnnualCoker(AnnualEquipment):
         self.annual_equip = annual_equip
         
         self.coker_dat_tup = self.get_annual_dat_newcoker()
-
+    
     def get_annual_dat_newcoker(self):
         coker_dat_tup = AnnualCoker_CO2(self.annual_equip
                                                     ).unmerge_annual_ewcoker()
@@ -1060,6 +1096,7 @@ class MonthlyCoker(AnnualCoker):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
+        self.toxicsEFs      = self.annual_equip.toxicsEFs
 
         # gas-sample lab results (DataFrames)
         self.NG_monthly     = ff.get_monthly_lab_results(
@@ -1088,7 +1125,8 @@ class MonthlyCoker(AnnualCoker):
             self.coker_dat = self.annual_eu.coker_dat_tup[1]
             
         self.monthly_emis   = self.calculate_monthly_equip_emissions_newcoker()
-
+        self.monthly_toxics = self.calculate_monthly_toxics(self.monthly_emis)
+    
     def calculate_monthly_equip_emissions_newcoker(self):
         """Return pd.Series of equipment unit emissions for specified month."""
         hourly = self.convert_from_ppm_newcoker()
@@ -1151,7 +1189,7 @@ class MonthlyCoker(AnnualCoker):
         monthly.loc[self.col_name_order[4:-1]] = monthly.loc[
                                 self.col_name_order[4:-1]] / 2000 # lbs --> tons
         return monthly
-        
+    
     def convert_from_ppm_newcoker(self):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
         both_df = self.merge_fuel_and_CEMS_newcoker()
@@ -1216,7 +1254,7 @@ class MonthlyCoker(AnnualCoker):
                                 self.ts_interval[0]:
                                 self.ts_interval[1]]
         return monthly_dat.copy()
-
+    
     def get_monthly_CEMS_newcoker(self):
         """Return pd.DataFrame of emis unit CEMS data for specified month."""
         CEMS_annual = self.annual_equip.CEMS_annual.copy()
@@ -1271,14 +1309,16 @@ class MonthlyCokerOLD(AnnualCoker):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
 #         self.ptags_pols     = self.annual_equip.ptags_pols
-
+        self.toxicsEFs      = self.annual_equip.toxicsEFs
+        
         self.cokerFG_monthly = ff.get_monthly_lab_results(
                                             self.annual_equip.cokerFG_annual,
                                             self.ts_interval)
- 
-        self.HHV_cokerFG    = ff.calculate_monthly_HHV(self.cokerFG_monthly)  
         
-        self.monthly_emis   = self.calculate_monthly_equip_emissions()    
+        self.HHV_cokerFG    = ff.calculate_monthly_HHV(self.cokerFG_monthly)
+        
+        self.monthly_emis   = self.calculate_monthly_equip_emissions()
+        self.monthly_toxics = self.calculate_monthly_toxics(self.monthly_emis)        
     
 class AnnualCoker_CO2(AnnualEquipment):
     """Parse and store annual coker data for CO2 calculations."""
@@ -1525,6 +1565,7 @@ class MonthlyCalciner(AnnualCalciner):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
+        self.toxicsEFs_calciners = self.annual_equip.toxicsEFs_calciners
 
         # fuel-sample lab results (pd.DataFrame)
         self.RFG_monthly    = ff.get_monthly_lab_results(
@@ -1539,6 +1580,25 @@ class MonthlyCalciner(AnnualCalciner):
 
         self.coke_annual    = self.annual_eu.coke_annual
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
+        self.monthly_toxics = self.calculate_monthly_calciner_toxics(self.monthly_emis)
+    
+    def calculate_monthly_calciner_toxics(self, monthly_emis):
+        """Calculate series of monthly toxics for given emissions unit."""
+        base_ser = self.get_series_for_calciner_toxics()
+        mult = base_ser.loc['coke_tons']
+        tox = self.toxicsEFs_calciners.copy()
+        tox.set_index('pollutant', inplace=True)
+        tox['lbs'] = tox['ef'] * mult
+        tox_ser = pd.concat([base_ser, tox['lbs']])
+        return tox_ser
+    
+    def get_series_for_calciner_toxics(self):
+        """return Series with sum of monthly calcined coke for calciner"""
+        return pd.Series(
+                    {'equipment':self.unit_key,
+                     'month'    :self.month,
+                     'coke_tons':self.get_monthly_coke()['coke_tons'].sum()}
+                        )
 
 class AnnualFlare(AnnualEquipment):
     """Parse and store annual flare data."""

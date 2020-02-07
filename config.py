@@ -8,7 +8,7 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
-first_month_to_calculate = 1
+first_month_to_calculate = 11
 last_month_to_calculate  = 12
 data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/' # all input data files
@@ -267,3 +267,86 @@ pollutants_all = [
                     # GHG
                     'CO2'
                 ]
+                
+# this list shouldn't be modified unless we get more or fewer EFs
+# in the EF spreadsheet
+# access from Equipment instance via: `list(self.toxicsEFs['pollutant'])`
+toxics_with_EFs = [                
+        'Acenaphthene',
+        'Acenaphthylene',
+        'Acetaldehyde',
+        'Acrolein',
+        'Anthracene',
+        'Antimony',
+        'Arsenic',
+        'Barium',
+        'Benzene',
+        'Benzo(a)anthracene',
+        'Benzo(a)pyrene',
+        'Benzo(b)fluoranthene',
+        'Benzo(g,h,i)perylene',
+        'Benzo(k)fluoranthene',
+        'Beryllium',
+        'Cadmium',
+        'Carbon Disulfide',
+        'Carbonyl Sulfide',
+        'Chromium',
+        'Chromium (hexavalent)',
+        'Chrysene',
+        'Copper',
+        'Cyclopentane',
+        'Dibenz(a,h)anthracene',
+        'Ethylbenzene',
+        'Fluoranthene',
+        'Fluorene',
+        'Formaldehyde',
+        'Indene',
+        'Indeno(1,2,3-cd)pyrene',
+        'Lead',
+        'Manganese',
+        'Mercury',
+        'Methylcyclohexane',
+        'Naphthalene',
+        'Nickel',
+        'Phenanthrene',
+        'Phenol',
+        'Phosphorus',
+        'Propylene',
+        'Pyrene',
+        'Selenium',
+        'Silver',
+        'Thallium',
+        'Toluene',
+        'Xylenes (mixed isomers)',
+        'm-xylene',
+        'o-xylene',
+        'p-xylene',
+        'Zinc']
+
+calciner_toxics_with_EFs = [
+        'Acetaldehyde',
+        'Acrolein',
+        'Anthracene',
+        'Antimony',
+        'Arsenic',
+        'Benzene',
+        'Benzo(a)pyrene',
+        'Beryllium',
+        'Cadmium',
+        'Chromium',
+        'Chrysene',
+        'Copper',
+        'Formaldehyde',
+        'Lead',
+        'Manganese',
+        'Mercury',
+        'Naphthalene',
+        'Nickel',
+        'Phosphorus',
+        'Pyrene',
+        'Selenium',
+        'Silver',
+        'Thallium',
+        'Toluene',
+        'Xylene',
+        'Zinc']
