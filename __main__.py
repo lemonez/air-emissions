@@ -62,7 +62,7 @@ def main():
     from parserClass import AnnualParser
     from equipClass import AnnualEquipment
     
-    AnnualParser(AnnualEquipment()).read_and_write_all()
+    AnnualParser(AnnualEquipment()).read_calculate_write_annual_emissions()
     
     # print total time for script runtime
     end_time_seconds = time.time()
@@ -119,7 +119,7 @@ def get_args():
                         default=cf.log_suffix,
                         help='Suffix to append to logfile names (default: \'%(default)s\').')
 
-    group2 = parser.add_argument_group('Data / Cloud Options')
+    group2 = parser.add_argument_group('Data / Calc Options')
     group2.add_argument('-e', '--equip',
                         dest='equip_to_calculate', metavar='Equips',
                         default=cf.equip_to_calculate,
@@ -131,7 +131,15 @@ def get_args():
     group2.add_argument('-m', '--months',
                         dest='months_to_calculate', metavar='Months',
                         default=cf.months_to_calculate,
-                        help='Months of data to parse(default: %(default)s).')
+                        help='Months of data to parse (default: %(default)s).')
+    group2.add_argument('-t', '--toxics',
+                        dest='calculate_toxics', metavar='T/F',
+                        default=cf.calculate_toxics,
+                        help='Whether or not to calculate toxics (default: %(default)s).')
+    group2.add_argument('-a', '--calciner_toxics',
+                        dest='calculate_calciner_toxics', metavar='T/F',
+                        default=cf.calculate_calciner_toxics,
+                        help='If calculating toxics, whether or not to calculate calciner toxics (default: %(default)s).')
                         
     group3 = parser.add_argument_group('Console Output / QA')
     # maybe change verbosity options; this may be confusing

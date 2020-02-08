@@ -418,7 +418,7 @@ class AnnualEquipment(object):
         cems_df['tstamp'] = pd.to_datetime(cems_df['tstamp'])
         # remove duplicate rows from daylight savings for 11/3/2019
         cems_df = cems_df[cems_df['tstamp'].dt.minute != 2]
-        print('    parsed CEMS data in: '+path)
+        print('    parsed CEMS data in: '+path[:50]+'*.csv')
         return cems_df
     
     @staticmethod

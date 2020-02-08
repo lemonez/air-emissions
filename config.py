@@ -15,7 +15,7 @@ data_dir      = './data_'+str(data_year)+'/' # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = '2019_toxicsDev'
+out_dir_child = '2019_toxicsDev_calciners'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
@@ -24,8 +24,8 @@ MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
 GHG = False
 
 # calculate toxics?
-we_are_calculating_toxics = True
-calciner_toxics = False
+calculate_toxics = True
+calculate_calciner_toxics = True
 calculate_PM_fractions = False
 
 # directories
@@ -193,6 +193,34 @@ def generate_month_map():
 
 if write_month_names:
     month_map = generate_month_map()
+
+Qmap = {
+        1   : 'Q1',
+        2   : 'Q1',
+        3   : 'Q1',
+        4   : 'Q2',
+        5   : 'Q2',
+        6   : 'Q2',
+        7   : 'Q3',
+        8   : 'Q3',
+        9   : 'Q3',
+        10  : 'Q4',
+        11  : 'Q4',
+        12  : 'Q4',
+
+        'Jan': 'Q1',
+        'Feb': 'Q1',
+        'Mar': 'Q1',
+        'Apr': 'Q2',
+        'May': 'Q2',
+        'Jun': 'Q2',
+        'Jul': 'Q3',
+        'Aug': 'Q3',
+        'Sep': 'Q3',
+        'Oct': 'Q4',
+        'Nov': 'Q4',
+        'Dec': 'Q4'
+       }
 
 def verify_pollutants_to_calc(pol_list):
     """Ensure only criteria or GHG pollutants are being calculated, not both."""
