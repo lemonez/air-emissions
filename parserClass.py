@@ -117,7 +117,8 @@ class AnnualParser(object):
                              sort=False)
                              .sum())
         # q_gb.drop(columns=['WED Pt', 'Equipment'], inplace=True)
-        q_gb.name = 'by_Quarter' 
+        q_gb.columns = MI_col
+        q_gb.name = 'by_Quarter'
         
         return [e_gb, m_gb, q_gb, eXm_gb, eXq_gb, qXe_gb]
 
