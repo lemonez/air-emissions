@@ -8,14 +8,14 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
-first_month_to_calculate = 11
+first_month_to_calculate = 1
 last_month_to_calculate  = 12
 data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/' # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = '2019_toxicsDev_calciners'
+out_dir_child = '2019_toxics'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
@@ -25,7 +25,7 @@ GHG = False
 
 # calculate toxics?
 calculate_toxics = True
-calculate_calciner_toxics = True
+calculate_calciner_toxics = False
 calculate_PM_fractions = False
 
 # directories
