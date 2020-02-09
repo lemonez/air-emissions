@@ -15,7 +15,7 @@ data_dir      = './data_'+str(data_year)+'/' # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = '2019_toxics'
+out_dir_child = '2019_toxics_calciners'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
@@ -25,7 +25,7 @@ GHG = False
 
 # calculate toxics?
 calculate_toxics = True
-calculate_calciner_toxics = False
+calculate_calciner_toxics = True
 calculate_PM_fractions = False
 
 # directories
