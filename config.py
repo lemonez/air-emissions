@@ -15,7 +15,7 @@ data_dir      = './data_'+str(data_year)+'/' # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = '2019_toxics_calciners'
+out_dir_child = '2019_criteria'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
@@ -24,8 +24,8 @@ MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
 GHG = False
 
 # calculate toxics?
-calculate_toxics = True
-calculate_calciner_toxics = True
+calculate_toxics = False
+calculate_calciner_toxics = False
 calculate_PM_fractions = False
 
 # directories
@@ -146,11 +146,11 @@ equip_to_calculate = [
 pollutants_to_calculate = [
                            # criteria
                            'NOx',
-#                          'CO',
+                           'CO',
                            'SO2',
                            'VOC',
-#                          'PM', 'PM25', 'PM10',
-#                          'H2SO4',
+                           'PM', 'PM25', 'PM10',
+                           'H2SO4',
 #                           'CO2'
                            ]
 if GHG:

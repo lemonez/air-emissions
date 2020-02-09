@@ -236,7 +236,10 @@ class AnnualParser(object):
                 annual_flare    = equipClass.AnnualFlare(self.annual_equip)
             if 'h2plant' in cf.equip_types_to_calculate:
                 annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
-
+            ordered_equip_to_calculate = [
+                                equip for equip in self.ordered_equip
+                                if equip in cf.equip_to_calculate
+                                ]
             for unit_key in ordered_equip_to_calculate:
                 each_equip_ser  = []
                 for month in self.months_to_calc:

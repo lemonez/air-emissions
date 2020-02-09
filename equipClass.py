@@ -1176,13 +1176,12 @@ class MonthlyCoker(AnnualCoker):
                                                         * ng_voc_ef / 1000)
                 else:
                     print('***WARNING: VOC emission factor not in lb/mmscf***')
-            # monthly.loc['h2so4'] = 0 # monthly.loc['so2'] * 0.026
         else:
             monthly.loc['pm']    = 0
             monthly.loc['pm25']  = 0
             monthly.loc['pm10']  = 0
             monthly.loc['voc']   = 0
-            monthly.loc['h2so4'] = 0
+        monthly.loc['h2so4'] = monthly.loc['so2'] * 0.026
         monthly.loc['equipment'] = self.unit_key
         monthly.loc['month'] = self.month
         monthly = monthly.reindex(self.col_name_order)
@@ -1633,17 +1632,17 @@ class MonthlyFlare(AnnualFlare):
         self.flarefuel_annual = self.annual_equip.flarefuel_annual
         self.flareHHV_annual  = self.annual_equip.flareHHV_annual
         
-        self.monthly_emis   = self.calculate_monthly_flare_emissions()
-        self.monthly_emis_apply_hourly = self.calculate_monthly_flare_emissions_apply_hourly()
+        #self.monthly_emis   = self.calculate_monthly_flare_emissions()
+        self.monthly_emis = self.calculate_monthly_flare_emissions_apply_hourly()
     
     def calculate_monthly_flare_emissions_apply_hourly(self):
         """Return pd.Series of flare emissions for specified month (HHV applied hourly)."""
         """
         ***HHV is applied at hourly aggregation level***
         """
-        fuel = self.get_monthly_flare_fuel()
+        fuel = self.get_monthly_flare_fuel().copy()
         # create intermediate column
-        fuel.loc[:,'var'] = 0
+        fuel['var'] = 0
         fuel.loc[ (fuel['valve'] > 0), 'var'] = fuel['discharge_to_flare']
         # if not 'unit down' and valve > 0: scenario = 'ssm'
         fuel.loc[:, 'op_scenario'] = 'ssm'
@@ -1746,11 +1745,10 @@ class MonthlyFlare(AnnualFlare):
         [calculation]
         multiply flare_header_flow by appropriate EF
         """
-        fuel = self.get_monthly_flare_fuel()
+        fuel = self.get_monthly_flare_fuel().copy()
         
         # create intermediate column
-        fuel.loc[:,'var'] = 0
-        
+        fuel['var'] = 0
         fuel.loc[ (fuel['valve'] > 0), 'var'] = fuel['discharge_to_flare']
         
         #     # create column to assign scenarios
