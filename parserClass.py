@@ -1,5 +1,6 @@
 import time
 import pandas as pd
+import numpy as np
 
 # module-level imports
 import config as cf
@@ -70,6 +71,7 @@ class AnnualParser(object):
     def groupby_annual(self):
         """Aggregate data in multiple schemes, return pd.DataFrame list."""
         annual_df = self.format_annual_columns()
+        annual_df = self.subtract_h2so4_if_output(annual_df)
         MI_col = self.return_MI_colnames(annual_df)
         print('Slicing and dicing emissions data for output.')
         
@@ -121,7 +123,26 @@ class AnnualParser(object):
         q_gb.name = 'by_Quarter'
         
         return [e_gb, m_gb, q_gb, eXm_gb, eXq_gb, qXe_gb]
-
+    
+    @staticmethod
+    def subtract_h2so4_if_output(annual):
+        """If H2SO4 is specified as a user output, subtract from SO2."""
+        """
+        H2SO4 is calculated as a fraction of SO2. If H2SO4 is specified
+        as a user output, this value must be subtracted from the SO2 value
+        so that it is not double counted. If H2SO4 is *not* going to written
+        as an output, then the H2SO4 value is  *not* subtracted because
+        that S portion should be accounted for in the output SO2 value.
+        If H2SO4 is not specified as a user output but some other function
+        is modified and it is still written, it will be written as zero so as
+        not to be double counted.
+        """
+        if 'H2SO4' in cf.pollutants_to_calculate:
+            annual['SO2'] = annual['SO2'] - (annual['H2SO4'] / 2000)
+        else:
+            annual['H2SO4'] = 0
+        return annual
+    
     def return_MI_colnames(self, annual_df):
         """Return MultiIndex with units of measurement for each column."""
 #TODO: refactor to create MultiIndex from existing columns instead of
