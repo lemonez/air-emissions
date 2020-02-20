@@ -212,22 +212,26 @@ class AnnualEquipment(object):
                                        values='ef').T.to_dict()
         
         return efs, pollutant_units, equip_EF_dict
-
+    
     def _parse_annual_calciner_toxics_EFs(self):
         """Parse calciner EF data, return pd.DataFrame."""
         """
         source (?): https://www3.epa.gov/ttn/chief/efpac/protocol/Protocol%20Report%202015.pdf
         """
         caltox = pd.read_excel(self.fpath_toxicsEFs_calciners,
-                                header=7, skipfooter=49, usecols=[0, 4, 6])
+                                header=7, skipfooter=49, usecols=[0, 4, 6, 8, 9])
         caltox = caltox[1:]
-        caltox.columns = ['unit_id', 'pollutant', 'ef']
+        caltox.columns = ['unit_id', 'pollutant', 'ef_uncontrolled', 'scrubber_control', 'WESP_control']
         # EFs are the same b/w calciners, so for now we can drop calciner_2 EFs
         caltox = caltox[(caltox['unit_id'] == 70)]# | (caltox['unit_id'] == 71)]
         caltox = caltox[(caltox['pollutant'] != '1,1,1-Trichloroethane') &
                         (caltox['pollutant'] != 'Vanadium')]
         caltox['units'] = 'lbs/ton calcined coke'
-        return caltox
+        caltox['ef'] = ( caltox['ef_uncontrolled']
+                       * ((100 - caltox['scrubber_control']) / 100 )
+                       * ((100 - caltox['WESP_control'])     / 100 )
+                       )
+        return caltox[['unit_id', 'pollutant', 'ef', 'units']]
     
     def _parse_annual_toxics_EFs(self):
         """Parse EFs for toxics; return pd.DataFrame."""
