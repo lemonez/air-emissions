@@ -8,7 +8,7 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
-first_month_to_calculate = 1
+first_month_to_calculate = 11
 last_month_to_calculate  = 12
 data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/' # all input data files
@@ -286,7 +286,9 @@ output_colnames_map = {
                 'pm25'         : 'PM25',
                 'pm10'         : 'PM10',
                 'h2so4'        : 'H2SO4',
-                'co2'          : 'CO2'
+                'co2'          : 'CO2',
+                'h2s'          : 'H2S',
+                'h2s_cems'     : 'H2S_CEMS_src'
                 }
 
 pollutants_all = [
@@ -294,8 +296,38 @@ pollutants_all = [
                     'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4',
                     # GHG
                     'CO2'
-                ]
-                
+                 ]
+
+h2s_cems_map = {
+    'uses_coker_h2s': ['coker_1', 'coker_2', 'coker_e', 'coker_w'],
+    'uses_CVTG_h2s' : ['crude_vtg'],
+    'uses_RFG_h2s'  : ['crude_rfg',
+                       'n_vac',
+                       's_vac',
+                       'boiler_4',
+                       'boiler_5',
+                       'boiler_6',
+                       'boiler_7',
+                       'hcr_1',
+                       'rxn_r_1',
+                       'dhds_heater_1',
+                       'dhds_reboiler_1',
+                       'ref_heater_2',
+                       'dhds_heater_2',
+                       'h_furnace_n',
+                       'h_furnace_s',
+                       'naptha_heater',
+                       'naptha_reboiler',
+                       'rxn_r_4',
+                       'iht_heater',
+                       'ref_heater_1',
+                       'ref_heater_2',
+                       'dhds_heater_3',
+                       'hcr_1',
+                       'hcr_2'
+                      ]
+               }
+
 # this list shouldn't be modified unless we get more or fewer EFs
 # in the EF spreadsheet
 # access from Equipment instance via: `list(self.toxicsEFs['pollutant'])`

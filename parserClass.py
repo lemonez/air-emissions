@@ -45,6 +45,7 @@ class AnnualParser(object):
         self.verbose_logging    = cf.verbose_logging
         
         self.all_equip_dict     = {}
+        self.all_equip_dict_h2s = {}
 
         self.toxics_text = ' '
         if self.is_toxics:
@@ -122,7 +123,31 @@ class AnnualParser(object):
         q_gb.columns = MI_col
         q_gb.name = 'by_Quarter'
         
+        self.groupby_annual_h2s()
+        
         return [e_gb, m_gb, q_gb, eXm_gb, eXq_gb, qXe_gb]
+    
+    def groupby_annual_h2s(self):
+        """Temp method to aggregate H2s output by year."""
+        
+        h2s_df = self.h2s_df_formatted
+        MI_col = self.MI_col_h2s
+
+## ended here 2/19/2020        
+        # Groupby [equipment, month] --> [equipment, month] x pollutants
+        eXm_gb = (annual_df.groupby(['WED Pt', 'Equipment', 'Month'],
+                                    sort=False)
+                                    .sum())
+        eXm_gb.columns = MI_col
+        eXm_gb.name = 'by_Equip_x_Month'
+        
+        # Groupby equipment --> equipment x pollutants
+        e_gb = (annual_df.groupby(['WED Pt', 'Equipment'],
+                                  sort=False)
+                                  .sum()[list(annual_df.columns[3:])])
+        e_gb.columns = MI_col
+        e_gb.name = 'by_Equip'
+
     
     @staticmethod
     def subtract_h2so4_if_output(annual):
@@ -166,9 +191,25 @@ class AnnualParser(object):
                         arr_col_lev0 += [pol]
                         arr_col_lev1 += ['lbs']            
                 arr_col = [arr_col_lev0, arr_col_lev1]
+
+                # for H2S
+                if len(self.annual_h2s) > 1:
+                    arr_col_lev0_h2s = ['Refinery Fuel Gas']
+                    arr_col_lev1_h2s = ['mscf'] * 1
+
+                for pol in ['H2S']:
+                    arr_col_lev0_h2s += [pol]
+                    arr_col_lev1_h2s += ['lbs']
+                    print('reached here') # DEBUG
+                    self.MI_col_h2s = pd.MultiIndex.from_arrays(
+                        [arr_col_lev0_h2s, arr_col_lev1_h2s],
+                         names=('Parameter', 'Units')
+                         )
+
             elif 'CO2' in cf.pollutants_to_calculate:
                 arr_col = [['Combined Fuel Gas', 'CO2'],
                            (['mscf'] * 1) + (['tons'] * 1)]
+        
         # if calculating toxics
         elif self.is_toxics:
             # if calculating toxics but not calciner toxics
@@ -186,6 +227,7 @@ class AnnualParser(object):
                     arr_col_lev0 += [pol]
                     arr_col_lev1 += ['lbs']
             arr_col = [arr_col_lev0, arr_col_lev1]
+        
         return pd.MultiIndex.from_arrays(arr_col, names=('Parameter', 'Units'))
 
     def format_annual_columns(self):
@@ -201,6 +243,16 @@ class AnnualParser(object):
                 col_order += ['Refinery Fuel Gas', 'Natural Gas']
                 col_order += ['NOx', 'CO', 'SO2', 'VOC',
                               'PM', 'PM25', 'PM10', 'H2SO4']
+
+            # for H2S
+            if len(self.annual_h2s) > 1:
+                h2s_df = self.h2s_df_labeled
+                col_order_h2s = ['WED Pt', 'Equipment', 'Month']
+                col_order_h2s += ['Refinery Fuel Gas']
+                col_order_h2s += ['H2S', 'H2S_CEMS_src']
+                self.h2s_df_formatted = h2s_df.rename(
+                    columns=cf.output_colnames_map)[col_order_h2s]
+        
         elif self.is_toxics:
             if self.is_calciner_toxics:
                 col_order += ['Calcined Coke']
@@ -208,6 +260,7 @@ class AnnualParser(object):
             elif not self.is_calciner_toxics:
                 col_order += ['Refinery Fuel Gas', 'Natural Gas']
                 col_order += cf.toxics_with_EFs
+
         return annual_df.rename(columns=cf.output_colnames_map)[col_order]
     
     def format_annual_labels(self):
@@ -229,8 +282,22 @@ class AnnualParser(object):
                                        'WED Pt': replace_WEDpt,
                                        'equipment': replace_equip
                                       })
+        
+        # for H2S
+        if len(self.annual_h2s) > 1:
+            h2s_df = self.annual_h2s
+            # change month integers to abbreviated names if specified
+            if self.write_month_names:
+                h2s_df['month'] = h2s_df['month'].astype(str)
+                h2s_df.replace({'month': self.month_map}, inplace=True)
+            h2s_df['WED Pt'] = h2s_df['equipment'] # make a copy to then replace
+# TODO: refactor so that this isn't just a side effect setting as instance attribute 
+            self.h2s_df_labeled = h2s_df.replace({
+                                                   'WED Pt': replace_WEDpt,
+                                                   'equipment': replace_equip
+                                                 })
         return annual_df
-
+    
     def calculate_aggregate_all_to_annual(self):
         """Return pd.DataFrame of annual emissions from listed equipment."""
         print('Calculating emissions for equipment and months specified...')
@@ -262,7 +329,8 @@ class AnnualParser(object):
                                 if equip in cf.equip_to_calculate
                                 ]
             for unit_key in ordered_equip_to_calculate:
-                each_equip_ser  = []
+                each_equip_ser       = []
+                each_equip_tuple_h2s = []
                 for month in self.months_to_calc:
                     if self.verbose_logging:
                         print('\tCalculating month {:2d}{}emissions for {}...'
@@ -286,16 +354,35 @@ class AnnualParser(object):
                     
                     if not self.is_toxics:
                         emis = eu.monthly_emis
+                        if eu.monthly_emis_h2s is None:
+                            h2s_tuple = None
+                        else:
+                            h2s_tuple = eu.monthly_emis_h2s
                     elif self.is_toxics:
                         emis = eu.monthly_toxics
                     each_equip_ser.append(emis)
+                    each_equip_tuple_h2s.append(h2s_tuple)
 
                 all_months = pd.concat(each_equip_ser, axis=1)
                 self.all_equip_dict[unit_key] = all_months
+
+                if each_equip_tuple_h2s:
+                    tups_not_None = [tup for tup
+                                     in each_equip_tuple_h2s
+                                     if not tup is None]
+                    all_months_h2s = pd.DataFrame(
+                                        tups_not_None,
+                                        columns=['month', 'equipment', 
+                                                 'fuel_rfg', 'h2s', 'h2s_cems']
+                                                 )
+                else:
+                    all_months_h2s = pd.DataFrame({'empty_col' : []})
+                self.all_equip_dict_h2s[unit_key] = all_months_h2s
+        
         elif 'CO2' in cf.pollutants_to_calculate:
             annual_coker_co2 = equipClass.AnnualCoker_CO2(self.annual_equip)
             for unit_key in ordered_equip_to_calculate:
-                each_equip_ser  = []
+                each_equip_ser = []
                 for month in self.months_to_calc:
                     if self.verbose_logging:
                         print('\tCalculating month {:2d}{}emissions for {}...'
@@ -310,13 +397,20 @@ class AnnualParser(object):
                     each_equip_ser.append(emis)
                 all_months = pd.concat(each_equip_ser, axis=1)
                 self.all_equip_dict[unit_key] = all_months
-            
-        # transpose and concatenate DataFrames
+        
+        # transpose and concatenate data
         annual_dfs = []
         for v in self.all_equip_dict.values():
             v.index.name = None
             annual_dfs.append(v.T)
         annual = pd.concat(annual_dfs)
+# TODO: refactor to actually return h2s df instead of side effect setting instance attribute
+        if self.all_equip_dict_h2s:
+            annual_dfs_h2s = []
+            for v in self.all_equip_dict_h2s.values():
+                v.index.name = None
+                annual_dfs_h2s.append(v)
+            self.annual_h2s = pd.concat(annual_dfs_h2s)
         
         # convert type "object" to type "float"
         annual[annual.columns[2:]] = annual[annual.columns[2:]].astype(float)

@@ -76,7 +76,8 @@ class AnnualEquipment(object):
         self.unitID_equip   = self._generate_unitID_unitkey_dict()   # dict: {WED Pt: Python GUID}
         self.ordered_equip  = self._generate_ordered_equip_list()    # list: [Python GUIDs ordered ascending by WED Pt]
         self.unitkey_name   = self._generate_unitkey_unitname_dict() # dict: {Python GUID: pretty name for output}
-                             
+        self.h2s_cems_map = cf.h2s_cems_map
+
         self._parse_annual_facility_data()
     
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
@@ -125,9 +126,9 @@ class AnnualEquipment(object):
         print('  parsing emission factor data')
         self.flareEFs       = self._parse_annual_flare_EFs()
                              # df: EFs for flare gas
-        self.toxicsEFs      = self.parse_annual_toxics_EFs()
+        self.toxicsEFs      = self._parse_annual_toxics_EFs()
                             # df: EFs for toxics
-        self.toxicsEFs_calciners = self.parse_annual_calciner_toxics_EFs()
+        self.toxicsEFs_calciners = self._parse_annual_calciner_toxics_EFs()
                             # df: EFs for calciner toxics
         self.EFs            = self._parse_annual_EFs()
                              # dict: {integer month: (EFs df, EFunits df, equip_EF_dict)}
@@ -212,8 +213,7 @@ class AnnualEquipment(object):
         
         return efs, pollutant_units, equip_EF_dict
 
-#not yet implemented/tested for 2019
-    def parse_annual_calciner_toxics_EFs(self):
+    def _parse_annual_calciner_toxics_EFs(self):
         """Parse calciner EF data, return pd.DataFrame."""
         """
         source (?): https://www3.epa.gov/ttn/chief/efpac/protocol/Protocol%20Report%202015.pdf
@@ -229,8 +229,7 @@ class AnnualEquipment(object):
         caltox['units'] = 'lbs/ton calcined coke'
         return caltox
     
-#not yet implemented/tested for 2019
-    def parse_annual_toxics_EFs(self):
+    def _parse_annual_toxics_EFs(self):
         """Parse EFs for toxics; return pd.DataFrame."""
         toxics = pd.read_excel(self.fpath_toxicsEFs, skipfooter=5,
                                #skiprows=3,
@@ -1011,6 +1010,170 @@ class AnnualEquipment(object):
         return HHV_multiplier
 
 #### END: methods for calculating toxics
+
+#### BEGIN: methods for calculating H2S
+
+    def read_and_write_all_h2s(self):
+        """calculate and write h2s emissions"""
+        
+        d = self.aggregate_to_annual_h2s(cf.h2s_equips_to_calc,
+                                         cf.months_to_calculate)
+        a = self.format_annual_h2s(d, month_names=cf.month_names)
+        self.groupby_and_write_annual_h2s(a, cf.year_to_calculate)
+
+    @staticmethod
+    def aggregate_to_annual_h2s(equip_list, months_to_parse):
+        """generate annual H2S emissions DataFrame
+        from list of equipment keys."""
+
+        # list equipment by ascending WED Pt for calculations and output
+        ordered_equips_to_calculate = []
+        for e in self.ordered_equip:
+            if e in equip_list:
+                ordered_equips_to_calculate.append(e)
+        
+        # calculate H2S emissions for every month x equipment combo specified
+        print('Calculating H2S emissions for equipment and months specified...')
+        
+        each_equip_month_tuple_list = []
+        for equip in ordered_equips_to_calculate:
+            for month in months_to_parse:
+                if cf.verbose_calc_status:
+                    print('\tCalculating month {:2d} emissions for {}...'
+                            .format(month, equip))
+                inst = Equipment(equip, month) # instantiate indiv equip
+                m = inst.calc_monthly_h2s_emissions()
+                each_equip_month_tuple_list.append(m)
+        
+        return pd.DataFrame(each_equip_month_tuple_list,
+                            columns=['month', 'equipment',
+                                     'fuel_rfg', 'h2s', 'h2s_cems'])
+    
+    @staticmethod
+    def format_annual_h2s(annual_df):
+        """Format data labels of annual emissions DataFrame
+        ([equipment, month] x pollutants) for CSV output."""
+        print('Formatting emissions data.')
+        # change month integers to abbreviated names if desired
+        if cf.write_month_names:
+            annual_df['month'] = annual_df['month'].astype(str)
+            annual_df.replace({'month': cf.month_map}, inplace=True)
+        # pretty up the names of equipment and column headers for output
+        annual_df['WED Pt'] = annual_df['equipment'].replace(
+                                            dict((v,k)
+                                            for k,v
+                                            in Equipment.unitID_equip.items()))
+        output_colnames = {
+            'month'    : 'Month',
+            'equipment': 'Equipment',
+            'fuel_rfg' : 'Fuel Usage',
+           #'fuel_ng'  : 'Natural Gas',
+           #'nox'      : 'NOx',
+           #'co'       : 'CO',
+           #'so2'      : 'SO2',
+           #'voc'      : 'VOC', 
+           #'pm'       : 'PM',
+           #'h2so4'    : 'H2SO4'
+            'h2s'      : 'H2S',
+            'h2s_cems' : 'H2S_CEMS'
+            }
+        annual_df = (annual_df.replace({'equipment': self.unitkey_name})
+                              .rename(columns=output_colnames))
+        col_order = ['WED Pt', 'Equipment', 'Month',
+                     'Fuel Usage', #'Natural Gas',
+                     #'NOx', 'CO', 'SO2', 'VOC', 'PM', 'H2SO4'
+                    'H2S', 'H2S_CEMS']
+        return annual_df[col_order]
+
+    @staticmethod
+    def groupby_and_write_annual_h2s(annual_df, year_to_parse,
+                                    write_csvs=True, return_dfs=False):
+        """Generate summary tables and write CSV output."""
+
+        print('Slicing and dicing emissions data for output.')
+
+        # create MultiIndex for renaming columns
+        arr_col = [['Fuel Usage', 'H2S'],
+                   ['mscf', 'lbs']]
+        MI_col = pd.MultiIndex.from_arrays(arr_col,
+                                           names=('Parameter', 'Units'))
+            # df.index.names = (['Quarter', 'Equipment']) ; q_gb.head()
+            # not sure if the tuple is necessary, can just pass a list
+        
+        # Groupby [equipment, month] --> [equipment, month] x pollutants
+        eXm_gb = annual_df.groupby(['WED Pt', 'Equipment', 'Month'],
+                                   sort=False).sum()
+        eXm_gb.columns = MI_col
+        eXm_gb.name = 'by_Equip_x_Month'
+
+        # Groupby equipment --> equipment x pollutants
+        e_gb = (annual_df.groupby(['WED Pt', 'Equipment'], sort=False)
+                         .sum()[list(annual_df.columns[3:5])])
+        e_gb.columns = MI_col
+        e_gb.name = 'by_Equip'
+        
+        frames = [e_gb, eXm_gb]
+        
+        if write_csvs:
+        
+            print('Writing output to files.')
+        
+            for df in frames:        
+                df.round(2).to_csv(cf.outpath_prefix
+                                     +str(year_to_parse)+'_'
+                                     +df.name+'_H2S'+'.csv')
+                
+            print('For '+str(cf.year_to_calculate)
+                    +' H2S emissions data, see files in '+cf.outpath_prefix+'.')
+    
+    def calc_monthly_h2s_emissions(self):
+        """Calculate monthly H2S (lbs)."""
+        return (
+                self.month,
+                self.unit_key, 
+                self.get_monthly_fuel()['fuel_rfg'].sum(),
+                self.convert_from_ppm_h2s(),
+                self.return_h2s_cems_source()
+               )
+    
+    def convert_from_ppm_h2s(self):
+        """Convert H2S from ppm to lbs."""
+        h2s_ppm   = self.get_monthly_h2s()
+        fuel_mscf = self.get_monthly_fuel()['fuel_rfg'].sum()
+        h2s_lbs   = (
+                       h2s_ppm       # monthly H2S  
+                       * fuel_mscf   # mscf
+                       * 34.1        # lb/lb-mol
+                       / (379*1000)  # (scf/lb-mol)
+                       * (1-0.99)    # (99% control efficiency)
+                    )
+        return h2s_lbs
+    
+    def get_monthly_h2s(self):
+        """Return float of average monthly H2S CEMS data (ppm)."""
+        all_cems = self.annual_equip.CEMS_annual
+        h2s_data = self.return_h2s_cems_source()
+        if h2s_data == 'coker_h2s':
+            h2s_ppm = all_cems[all_cems['ptag'] == '12AI55A.PV']
+        elif h2s_data == 'CVTG_h2s':
+            h2s_ppm = all_cems[all_cems['ptag'] == '10AI136A.PV']
+        elif h2s_data == 'RFG_h2s':
+            h2s_ppm = all_cems[all_cems['ptag'] == '30AI568A.PV']
+        h2s_monthly = h2s_ppm.loc[self.ts_interval[0]:self.ts_interval[1]]
+        return h2s_monthly['val'].mean()
+    
+    def return_h2s_cems_source(self):
+        """Return string indicating which H2S cems data to use."""
+        if self.unit_key in self.annual_equip.h2s_cems_map['uses_coker_h2s']:
+            h2s_data_source = 'coker_h2s'
+        elif self.unit_key in self.annual_equip.h2s_cems_map['uses_CVTG_h2s']:
+            h2s_data_source = 'CVTG_h2s'
+        else:
+            h2s_data_source = 'RFG_h2s'
+        return h2s_data_source
+
+#### END: methods for calculating H2S
+
         
 class AnnualHB(AnnualEquipment):
     """Parse and store annual heater/boiler data."""
@@ -1061,6 +1224,7 @@ class MonthlyHB(AnnualHB):
         else:
             self.monthly_emis   = self.calculate_monthly_equip_emissions()
         self.monthly_toxics = self.calculate_monthly_toxics(self.monthly_emis)
+        self.monthly_emis_h2s = self.calc_monthly_h2s_emissions()
 
 class AnnualCoker(AnnualEquipment):
     """Parse and store annual coker data for new (2019+) cokers."""
@@ -1126,6 +1290,7 @@ class MonthlyCoker(AnnualCoker):
             
         self.monthly_emis   = self.calculate_monthly_equip_emissions_newcoker()
         self.monthly_toxics = self.calculate_monthly_toxics(self.monthly_emis)
+        self.monthly_emis_h2s = self.calc_monthly_h2s_emissions()
     
     def calculate_monthly_equip_emissions_newcoker(self):
         """Return pd.Series of equipment unit emissions for specified month."""
@@ -1318,7 +1483,8 @@ class MonthlyCokerOLD(AnnualCoker):
         
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
         self.monthly_toxics = self.calculate_monthly_toxics(self.monthly_emis)        
-    
+        self.monthly_emis_h2s = self.calc_monthly_h2s_emissions()
+
 class AnnualCoker_CO2(AnnualEquipment):
     """Parse and store annual coker data for CO2 calculations."""
     def __init__(self, annual_equip):
@@ -1580,6 +1746,7 @@ class MonthlyCalciner(AnnualCalciner):
         self.coke_annual    = self.annual_eu.coke_annual
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
         self.monthly_toxics = self.calculate_monthly_calciner_toxics(self.monthly_emis)
+        self.monthly_emis_h2s = None
     
     def calculate_monthly_calciner_toxics(self, monthly_emis):
         """Calculate series of monthly toxics for given emissions unit."""
@@ -1634,6 +1801,7 @@ class MonthlyFlare(AnnualFlare):
         
         #self.monthly_emis   = self.calculate_monthly_flare_emissions()
         self.monthly_emis = self.calculate_monthly_flare_emissions_apply_hourly()
+        self.monthly_emis_h2s = None
     
     def calculate_monthly_flare_emissions_apply_hourly(self):
         """Return pd.Series of flare emissions for specified month (HHV applied hourly)."""
@@ -1903,6 +2071,7 @@ class MonthlyH2Plant(AnnualH2Plant):
                                             self.ts_interval)
         
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
+        self.monthly_emis_h2s = None
 
 ##============================================================================##
 
