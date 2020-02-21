@@ -47,8 +47,9 @@ if data_year == 2019:
     fname_h2stack  = str(data_year)+'_flow_h2stack_Dec.xlsx'   # annual H2-stack flow data
     fname_PSAstack = str(data_year)+'_flow_PSAoffgas_Dec.xlsx' # PSA offgas flow data for #2 H2 Plant
     fname_flareEFs = str(data_year)+'_EFs_flare.xlsx'          # EFs for H2 flare
-    fname_toxicsEFs= str(data_year)+'_EFs_toxics.xlsx'         # EFs for toxics
-    fname_toxicsEFs_calciners = str(data_year)+'_EFs_calciner_toxics.xlsx' # EFs for calciners toxics
+    fname_toxicsEFs_FG = str(data_year)+'_EFs_toxics_FG.xlsx'         # EFs for toxics
+    fname_toxicsEFs_NG = str(data_year)+'_EFs_toxics_NG.xlsx' # EFs for natural gas toxics
+    fname_toxicsEFs_calciners = str(data_year)+'_EFs_toxics_calciner.xlsx' # EFs for calciners toxics
     
     labtab_NG       = '#2H2FdNatGas 2019'  # NG-sample lab-test data
     labtab_RFG      = 'RFG 2019'           # RFG-sample lab-test data
@@ -99,9 +100,9 @@ fpath_flarefuel= annual_prefix+fname_flarefuel
 fpath_h2stack  = annual_prefix+fname_h2stack
 fpath_PSAstack = annual_prefix+fname_PSAstack
 fpath_flareEFs = annual_prefix+fname_flareEFs
-fpath_toxicsEFs= annual_prefix+fname_toxicsEFs
+fpath_toxicsEFs_FG = annual_prefix+fname_toxicsEFs_FG
+fpath_toxicsEFs_NG = annual_prefix+fname_toxicsEFs_NG
 fpath_toxicsEFs_calciners = annual_prefix+fname_toxicsEFs_calciners
-    
 
 ################################################################################
 ################################################################################
@@ -329,10 +330,9 @@ h2s_cems_map = {
                       ]
                }
 
-# this list shouldn't be modified unless we get more or fewer EFs
-# in the EF spreadsheet
-# access from Equipment instance via: `list(self.toxicsEFs['pollutant'])`
-toxics_with_EFs = [
+# these lists are based on the respective EF spreadsheets and therefore
+# should not be modified without modifying those sources as well
+FG_toxics_with_EFs = [
     # organics
     'Acenaphthene',
     'Acenaphthylene',
@@ -385,6 +385,41 @@ toxics_with_EFs = [
     'Silver',
     'Thallium',
     'Zinc'
+    ]
+
+NG_toxics_with_EFs = [
+    # organics
+    'Acenaphthene',
+    'Acenaphthylene',
+    'Anthracene',
+    'Benzene',
+    'Benzo(a)anthracene',
+    'Benzo(a)pyrene',
+    'Benzo(b)fluoranthene',
+    'Benzo(g,h,i)perylene',
+    'Benzo(k)fluoranthene',
+    'Chromium (hexavalent)',
+    'Chrysene',
+    'Dibenz(a,h)anthracene',
+    'Fluoranthene',
+    'Fluorene',
+    'Formaldehyde',
+    'Hydrogen sulfide',
+    'Indeno(1,2,3-cd)pyrene',
+    'Naphthalene',
+    'Phenanthrene',
+    'Propylene',
+    # metals
+    'Arsenic',
+    'Barium',
+    'Beryllium',
+    'Cadmium',
+    'Chromium',
+    'Copper',
+    'Manganese',
+    'Mercury',
+    'Nickel',
+    'Selenium'
     ]
 
 calciner_toxics_with_EFs = [
