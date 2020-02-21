@@ -1794,7 +1794,7 @@ class MonthlyCalciner(AnnualCalciner):
         """Calculate series of monthly toxics for given emissions unit."""
         base_ser = self.get_series_for_calciner_toxics()
         mult = base_ser.loc['coke_tons']
-        tox = self.toxicsEFs_calciners.copy()
+        tox = self.toxicsEFs
         tox.set_index('pollutant', inplace=True)
         tox['lbs'] = tox['ef'] * mult
         tox_ser = pd.concat([base_ser, tox['lbs']])

@@ -39,6 +39,8 @@ class AnnualParser(object):
     #    h2s_equips_to_calc     = cf.h2s_equips_to_calc
     #    EFs_to_check           = cf.EFs_to_check
         self.is_toxics          = cf.calculate_toxics
+        self.is_FG_toxics       = cf.calculate_NG_toxics
+        self.is_NG_toxics       = cf.calculate_FG_toxics
         self.is_calciner_toxics = cf.calculate_calciner_toxics
         self.write_month_names  = cf.write_month_names
         self.month_map          = cf.month_map
@@ -49,24 +51,31 @@ class AnnualParser(object):
 
         self.toxics_text = ' '
         if self.is_toxics:
-            self.toxics_text = ' toxics '
+            if self.is_FG_toxics:
+                self.toxics_text = ' fuel gas toxics '
+            if self.is_NG_toxics:
+                self.toxics_text = ' natural gas toxics '
+            if self.is_calciner_toxics:
+                self.toxics_text = ' calciner toxics '
 
         self.ordered_equip = self.annual_equip.ordered_equip
     
     def read_calculate_write_annual_emissions(self):
         """Parse data for specified equipment, calculate emissions, write CSVs."""
+        if not self.is_toxics:
+            format_str = ''
+        elif self.is_toxics:
+            if self.is_FG_toxics:
+                format_str = '_TOXICS_FG'
+            elif self.is_NG_toxics:
+                format_str = '_TOXICS_NG'
+            elif self.is_calciner_toxics:
+                format_str = '_TOXICS_calciners'
         for df in self.groupby_annual():
             outname = (self.out_dir_child
                        +str(self.year_to_calc)+'_'
                        +df.name+'{}.csv')
-            if not self.is_toxics:
-                outname = outname.format('')
-            else:
-                if not self.is_calciner_toxics:
-                    outname = outname.format('_TOXICS')
-                else:
-                    outname = outname.format('_calciners_TOXICS')
-            df.round(cf.round_decimals).to_csv(outname)
+            df.round(cf.round_decimals).to_csv(outname.format(format_str))
     
     def groupby_annual(self):
         """Aggregate data in multiple schemes, return pd.DataFrame list."""
@@ -123,7 +132,8 @@ class AnnualParser(object):
         q_gb.columns = MI_col
         q_gb.name = 'by_Quarter'
         
-        self.groupby_annual_h2s()
+        if not self.is_toxics:
+            self.groupby_annual_h2s()
         
         return [e_gb, m_gb, q_gb, eXm_gb, eXq_gb, qXe_gb]
     
@@ -216,17 +226,20 @@ class AnnualParser(object):
             elif 'CO2' in cf.pollutants_to_calculate:
                 arr_col = [['Combined Fuel Gas', 'CO2'],
                            (['mscf'] * 1) + (['tons'] * 1)]
-        
-        # if calculating toxics
+
         elif self.is_toxics:
-            # if calculating toxics but not calciner toxics
-            if not self.is_calciner_toxics:
-                arr_col_lev0 = ['Refinery Fuel Gas', 'Natural Gas']
-                arr_col_lev1 = ['mscf'] * 2
-                for pol in cf.toxics_with_EFs:
+            if self.is_FG_toxics:
+                arr_col_lev0 = ['Refinery Fuel Gas']
+                arr_col_lev1 = ['mscf']
+                for pol in cf.FG_toxics_with_EFs:
                     arr_col_lev0 += [pol]
                     arr_col_lev1 += ['lbs']
-            # if calculating calciner toxics
+            elif self.is_NG_toxics:
+                arr_col_lev0 = ['Natural Gas']
+                arr_col_lev1 = ['mscf']
+                for pol in cf.NG_toxics_with_EFs:
+                    arr_col_lev0 += [pol]
+                    arr_col_lev1 += ['lbs']
             elif self.is_calciner_toxics:
                 arr_col_lev0 = ['Calcined Coke']
                 arr_col_lev1 = ['tons']
@@ -263,15 +276,17 @@ class AnnualParser(object):
                 outfile_H2S = (self.out_dir_child+str(self.year_to_calc)+
                               '_'+h2s_df_formatted.name+'{}.csv'.format(''))
                 self.h2s_df_formatted = h2s_df_formatted
-# for now, write to file
         
         elif self.is_toxics:
-            if self.is_calciner_toxics:
+            if self.is_FG_toxics:
+                col_order += ['Refinery Fuel Gas']
+                col_order += cf.FG_toxics_with_EFs
+            elif self.is_NG_toxics:
+                col_order += ['Natural Gas']
+                col_order += cf.NG_toxics_with_EFs
+            elif self.is_calciner_toxics:
                 col_order += ['Calcined Coke']
                 col_order += cf.calciner_toxics_with_EFs
-            elif not self.is_calciner_toxics:
-                col_order += ['Refinery Fuel Gas', 'Natural Gas']
-                col_order += cf.toxics_with_EFs
 
         return annual_df.rename(columns=cf.output_colnames_map)[col_order]
     
@@ -331,14 +346,16 @@ class AnnualParser(object):
                                 if e in cf.equip_to_calculate
                                 ]
             if self.is_toxics:
-                if self.is_calciner_toxics:
-                    ordered_equip_to_calculate = ['calciner_1', 'calciner_2']
-                elif not self.is_calciner_toxics:
+                if self.is_FG_toxics:
                     to_remove = ['h2_flare', 'h2_plant_2', 'calciner_1', 'calciner_2']
                     ordered_equip_to_calculate = [
-                                        e for e in ordered_equip_to_calculate
-                                        if e not in to_remove
-                                        ]
+                                e for e in ordered_equip_to_calculate
+                                if e not in to_remove
+                                ]
+                elif self.is_NG_toxics:
+                    ordered_equip_to_calculate = ['h2_plant_2']
+                elif self.is_calciner_toxics:
+                    ordered_equip_to_calculate = ['calciner_1', 'calciner_2']
             for unit_key in ordered_equip_to_calculate:
                 each_equip_ser       = []
                 each_equip_tuple_h2s = []
