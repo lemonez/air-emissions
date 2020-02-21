@@ -55,7 +55,6 @@ class AnnualParser(object):
     
     def read_calculate_write_annual_emissions(self):
         """Parse data for specified equipment, calculate emissions, write CSVs."""
-        print('Writing output to files.')
         for df in self.groupby_annual():
             outname = (self.out_dir_child
                        +str(self.year_to_calc)+'_'
@@ -72,7 +71,8 @@ class AnnualParser(object):
     def groupby_annual(self):
         """Aggregate data in multiple schemes, return pd.DataFrame list."""
         annual_df = self.format_annual_columns()
-        annual_df = self.subtract_h2so4_if_output(annual_df)
+        if not self.is_toxics:
+            annual_df = self.subtract_h2so4_if_output(annual_df)
         MI_col = self.return_MI_colnames(annual_df)
         print('Slicing and dicing emissions data for output.')
         
@@ -127,27 +127,35 @@ class AnnualParser(object):
         
         return [e_gb, m_gb, q_gb, eXm_gb, eXq_gb, qXe_gb]
     
+# TODO: refactor to have same logic flow as for criteria pollutant values
     def groupby_annual_h2s(self):
-        """Temp method to aggregate H2s output by year."""
-        
-        h2s_df = self.h2s_df_formatted
+        """Aggregate H2S output by year, write to files."""
+        h2s_df = self.h2s_df_formatted.copy()
+        h2s_df.drop(columns=['H2S_CEMS_src'], inplace=True)
         MI_col = self.MI_col_h2s
 
-## ended here 2/19/2020        
         # Groupby [equipment, month] --> [equipment, month] x pollutants
-        eXm_gb = (annual_df.groupby(['WED Pt', 'Equipment', 'Month'],
+        eXm_gb = (h2s_df.groupby(['WED Pt', 'Equipment', 'Month'],
                                     sort=False)
                                     .sum())
         eXm_gb.columns = MI_col
         eXm_gb.name = 'by_Equip_x_Month'
-        
+
         # Groupby equipment --> equipment x pollutants
-        e_gb = (annual_df.groupby(['WED Pt', 'Equipment'],
+        e_gb = (h2s_df.groupby(['WED Pt', 'Equipment'],
                                   sort=False)
-                                  .sum()[list(annual_df.columns[3:])])
+                                  .sum()[list(h2s_df.columns[3:])])
         e_gb.columns = MI_col
         e_gb.name = 'by_Equip'
 
+        self.h2s_eXm, self.h2s_e = eXm_gb, e_gb
+        
+        for df in [eXm_gb, e_gb]:
+            outname = (cf.out_dir_child
+                       +str(self.year_to_calc)+'_'
+                       +df.name+'{}.csv')
+            outname = outname.format('_H2S')
+            df.round(cf.round_decimals).to_csv(outname)
     
     @staticmethod
     def subtract_h2so4_if_output(annual):
@@ -200,7 +208,6 @@ class AnnualParser(object):
                 for pol in ['H2S']:
                     arr_col_lev0_h2s += [pol]
                     arr_col_lev1_h2s += ['lbs']
-                    print('reached here') # DEBUG
                     self.MI_col_h2s = pd.MultiIndex.from_arrays(
                         [arr_col_lev0_h2s, arr_col_lev1_h2s],
                          names=('Parameter', 'Units')
@@ -250,8 +257,13 @@ class AnnualParser(object):
                 col_order_h2s = ['WED Pt', 'Equipment', 'Month']
                 col_order_h2s += ['Refinery Fuel Gas']
                 col_order_h2s += ['H2S', 'H2S_CEMS_src']
-                self.h2s_df_formatted = h2s_df.rename(
+                h2s_df_formatted = h2s_df.rename(
                     columns=cf.output_colnames_map)[col_order_h2s]
+                h2s_df_formatted.name = 'H2S_test'
+                outfile_H2S = (self.out_dir_child+str(self.year_to_calc)+
+                              '_'+h2s_df_formatted.name+'{}.csv'.format(''))
+                self.h2s_df_formatted = h2s_df_formatted
+# for now, write to file
         
         elif self.is_toxics:
             if self.is_calciner_toxics:
@@ -301,16 +313,6 @@ class AnnualParser(object):
     def calculate_aggregate_all_to_annual(self):
         """Return pd.DataFrame of annual emissions from listed equipment."""
         print('Calculating emissions for equipment and months specified...')
-        if self.is_toxics:
-            if self.is_calciner_toxics:
-                ordered_equip_to_calculate = ['calciner_1', 'calciner_2']
-            elif not self.is_calciner_toxics:
-                to_remove = ['h2_flare', 'h2_plant_2', 'calciner_1', 'calciner_2']
-                ordered_equip_to_calculate = [
-                                    equip for equip in self.ordered_equip
-                                    if equip in cf.equip_to_calculate
-                                    and equip not in to_remove
-                                    ]
         if 'CO2' not in cf.pollutants_to_calculate:
             if 'heaterboiler' in cf.equip_types_to_calculate:
                 annual_hb       = equipClass.AnnualHB(self.annual_equip)
@@ -325,9 +327,18 @@ class AnnualParser(object):
             if 'h2plant' in cf.equip_types_to_calculate:
                 annual_h2plant  = equipClass.AnnualH2Plant(self.annual_equip)
             ordered_equip_to_calculate = [
-                                equip for equip in self.ordered_equip
-                                if equip in cf.equip_to_calculate
+                                e for e in self.ordered_equip
+                                if e in cf.equip_to_calculate
                                 ]
+            if self.is_toxics:
+                if self.is_calciner_toxics:
+                    ordered_equip_to_calculate = ['calciner_1', 'calciner_2']
+                elif not self.is_calciner_toxics:
+                    to_remove = ['h2_flare', 'h2_plant_2', 'calciner_1', 'calciner_2']
+                    ordered_equip_to_calculate = [
+                                        e for e in ordered_equip_to_calculate
+                                        if e not in to_remove
+                                        ]
             for unit_key in ordered_equip_to_calculate:
                 each_equip_ser       = []
                 each_equip_tuple_h2s = []
@@ -361,7 +372,8 @@ class AnnualParser(object):
                     elif self.is_toxics:
                         emis = eu.monthly_toxics
                     each_equip_ser.append(emis)
-                    each_equip_tuple_h2s.append(h2s_tuple)
+                    if not self.is_toxics:
+                        each_equip_tuple_h2s.append(h2s_tuple)
 
                 all_months = pd.concat(each_equip_ser, axis=1)
                 self.all_equip_dict[unit_key] = all_months

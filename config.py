@@ -8,14 +8,14 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
-first_month_to_calculate = 11
+first_month_to_calculate = 1
 last_month_to_calculate  = 12
 data_year     = 2019  # year_to_calculate = int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/' # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = '2019_criteria'
+out_dir_child = '2019_criteria/'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18 # maximum consecutive missing CEMS values to fill
@@ -140,7 +140,7 @@ equip_to_calculate = [
                       'boiler_5',
                       'boiler_6',
                       'boiler_7',
-                      'h2_flare',
+#                      'h2_flare',
                       ]
 
 pollutants_to_calculate = [
@@ -299,7 +299,8 @@ pollutants_all = [
                  ]
 
 h2s_cems_map = {
-    'uses_coker_h2s': ['coker_1', 'coker_2', 'coker_e', 'coker_w'],
+    'uses_coker_h2s': ['coker_e', 'coker_w'],
+    'uses_cokerOLD_h2s': ['coker_1', 'coker_2'],
     'uses_CVTG_h2s' : ['crude_vtg'],
     'uses_RFG_h2s'  : ['crude_rfg',
                        'n_vac',

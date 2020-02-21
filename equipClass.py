@@ -228,8 +228,8 @@ class AnnualEquipment(object):
                         (caltox['pollutant'] != 'Vanadium')]
         caltox['units'] = 'lbs/ton calcined coke'
         caltox['ef'] = ( caltox['ef_uncontrolled']
-                       * ((100 - caltox['scrubber_control']) / 100 )
-                       * ((100 - caltox['WESP_control'])     / 100 )
+                       * ((100 - caltox['scrubber_control']) / 100)
+                       * ((100 - caltox['WESP_control']) / 100)
                        )
         return caltox[['unit_id', 'pollutant', 'ef', 'units']]
     
@@ -421,7 +421,7 @@ class AnnualEquipment(object):
         cems_df['tstamp'] = pd.to_datetime(cems_df['tstamp'])
         # remove duplicate rows from daylight savings for 11/3/2019
         cems_df = cems_df[cems_df['tstamp'].dt.minute != 2]
-        print('    parsed CEMS data in: '+path[:50]+'*.csv')
+        print('    parsed CEMS data in: '+path[:40]+'*.csv')
         return cems_df
     
     @staticmethod
@@ -991,7 +991,8 @@ class AnnualEquipment(object):
         tox = self.toxicsEFs.copy()
         tox.set_index('pollutant', inplace=True)
         tox['lbs'] = tox['ef'] * mult
-        tox_ser = pd.concat([base_ser, tox['lbs']])
+        tox_ordered = tox['lbs'].reindex(cf.toxics_with_EFs) # reorder for WEIRS
+        tox_ser = pd.concat([base_ser, tox_ordered])
         return tox_ser
     
     def get_fuel_type_for_toxics(self):
@@ -1119,7 +1120,6 @@ class AnnualEquipment(object):
         frames = [e_gb, eXm_gb]
         
         if write_csvs:
-        
             print('Writing output to files.')
         
             for df in frames:        
@@ -1158,6 +1158,8 @@ class AnnualEquipment(object):
         all_cems = self.annual_equip.CEMS_annual
         h2s_data = self.return_h2s_cems_source()
         if h2s_data == 'coker_h2s':
+            h2s_ppm = all_cems[all_cems['ptag'] == '12AI3751.PV']
+        elif h2s_data == 'cokerOLD_h2s':
             h2s_ppm = all_cems[all_cems['ptag'] == '12AI55A.PV']
         elif h2s_data == 'CVTG_h2s':
             h2s_ppm = all_cems[all_cems['ptag'] == '10AI136A.PV']
@@ -1170,6 +1172,8 @@ class AnnualEquipment(object):
         """Return string indicating which H2S cems data to use."""
         if self.unit_key in self.annual_equip.h2s_cems_map['uses_coker_h2s']:
             h2s_data_source = 'coker_h2s'
+        elif self.unit_key in self.annual_equip.h2s_cems_map['uses_cokerOLD_h2s']:
+            h2s_data_source = 'cokerOLD_h2s'
         elif self.unit_key in self.annual_equip.h2s_cems_map['uses_CVTG_h2s']:
             h2s_data_source = 'CVTG_h2s'
         else:
