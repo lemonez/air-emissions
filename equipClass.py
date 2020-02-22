@@ -1003,8 +1003,7 @@ class AnnualEquipment(object):
         """Calculate series of monthly toxics for given emissions unit."""
         base_ser = self.get_series_for_toxics()
         mult_fuel = base_ser.loc[self.get_fuel_type_for_toxics()]
-        tox = self.toxicsEFs
-        print(list(tox.columns))
+        tox = self.toxicsEFs.copy()
         tox.set_index('pollutant', inplace=True)
         if self.unit_key in ['calciner_1', 'calciner_2']:
             tox['lbs'] = tox['ef'] * mult_fuel
@@ -1253,7 +1252,7 @@ class MonthlyHB(AnnualHB):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_FG.copy()
+        self.toxicsEFs      = self.annual_equip.toxicsEFs_FG
         
         # fuel-sample lab results (pd.DataFrame)
         self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
@@ -1312,7 +1311,7 @@ class MonthlyCoker(AnnualCoker):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_FG.copy()
+        self.toxicsEFs      = self.annual_equip.toxicsEFs_FG
 
         # gas-sample lab results (DataFrames)
         self.NG_monthly     = ff.get_monthly_lab_results(
@@ -1525,7 +1524,7 @@ class MonthlyCokerOLD(AnnualCoker):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
 #         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_FG.copy()
+        self.toxicsEFs      = self.annual_equip.toxicsEFs_FG
         
         self.cokerFG_monthly = ff.get_monthly_lab_results(
                                             self.annual_equip.cokerFG_annual,
@@ -1782,7 +1781,7 @@ class MonthlyCalciner(AnnualCalciner):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_calciners.copy()
+        self.toxicsEFs      = self.annual_equip.toxicsEFs_calciners
 
         # fuel-sample lab results (pd.DataFrame)
         self.RFG_monthly    = ff.get_monthly_lab_results(
@@ -1799,16 +1798,6 @@ class MonthlyCalciner(AnnualCalciner):
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
         self.monthly_toxics = self.calculate_monthly_toxics()
         self.monthly_emis_h2s = None
-    
-    def calculate_monthly_calciner_toxics(self, monthly_emis):
-        """Calculate series of monthly toxics for given emissions unit."""
-        base_ser = self.get_series_for_toxics()
-        mult = base_ser.loc[self.get_fuel_type_for_toxics()]
-        tox = self.toxicsEFs
-        tox.set_index('pollutant', inplace=True)
-        tox['lbs'] = tox['ef'] * mult
-        tox_ser = pd.concat([base_ser, tox['lbs']])
-        return tox_ser
 
 class AnnualFlare(AnnualEquipment):
     """Parse and store annual flare data."""
@@ -2093,7 +2082,7 @@ class MonthlyH2Plant(AnnualH2Plant):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_NG.copy()
+        self.toxicsEFs      = self.annual_equip.toxicsEFs_NG
         
         self.h2stack_annual = self.annual_eu.h2stack_annual
         self.PSAstack_annual= self.annual_eu.PSAstack_annual
