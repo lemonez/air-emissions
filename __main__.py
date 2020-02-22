@@ -136,7 +136,15 @@ def get_args():
                         dest='calculate_toxics', metavar='T/F',
                         default=cf.calculate_toxics,
                         help='Whether or not to calculate toxics (default: %(default)s).')
-    group2.add_argument('-a', '--calciner_toxics',
+    group2.add_argument('--FG_toxics',
+                        dest='calculate_FG_toxics', metavar='T/F',
+                        default=cf.calculate_FG_toxics,
+                        help='If calculating toxics, whether or not to calculate fuel gas toxics (default: %(default)s).')
+    group2.add_argument('--NG_toxics',
+                        dest='calculate_NG_toxics', metavar='T/F',
+                        default=cf.calculate_NG_toxics,
+                        help='If calculating toxics, whether or not to calculate natural gas toxics (default: %(default)s).')
+    group2.add_argument('--calciner_toxics',
                         dest='calculate_calciner_toxics', metavar='T/F',
                         default=cf.calculate_calciner_toxics,
                         help='If calculating toxics, whether or not to calculate calciner toxics (default: %(default)s).')

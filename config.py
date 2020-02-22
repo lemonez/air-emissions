@@ -24,9 +24,9 @@ GHG = False                                     # calculate GHG?
 
 calculate_toxics = True                         # calculate toxics?
 if calculate_toxics:
-    calculate_FG_toxics = False#True
-    calculate_NG_toxics = False#True
-    calculate_calciner_toxics = True#False
+    calculate_FG_toxics = False
+    calculate_NG_toxics = False
+    calculate_calciner_toxics = True
     out_dir_child = '2019_toxics/'
 
 calculate_PM_fractions = False                  # calculate separate PM fractions?
@@ -411,6 +411,7 @@ NG_toxics_with_EFs = [
     'Naphthalene',
     'Phenanthrene',
     'Propylene',
+    'Toluene',
     # metals
     'Arsenic',
     'Barium',
@@ -421,7 +422,8 @@ NG_toxics_with_EFs = [
     'Manganese',
     'Mercury',
     'Nickel',
-    'Selenium'
+    'Selenium',
+    'Zinc'
     ]
 
 calciner_toxics_with_EFs = [

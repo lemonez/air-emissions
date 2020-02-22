@@ -235,12 +235,12 @@ class AnnualEquipment(object):
                        * ((100 - caltox['scrubber_control']) / 100)
                        * ((100 - caltox['WESP_control']) / 100)
                        )
-        return caltox[['unit_id', 'pollutant', 'ef', 'units']]
+        return caltox[['pollutant', 'ef', 'units']]
     
     def _parse_annual_NG_toxics_EFs(self):
         """Parse EFs for toxics; return pd.DataFrame."""
         toxics = pd.read_excel(self.fpath_toxicsEFs_NG,
-                               header=4, skipfooter=5,
+                               header=4,
                                usecols=[0,10,11])
         toxics.rename(columns={'Chemical'   : 'pollutant',
                                'EF.1'       : 'ef',
@@ -785,9 +785,9 @@ class AnnualEquipment(object):
     def convert_from_ppm(self, both_df):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
         if self.unit_key == 'h2_plant_2':
-            h2stack_df    = self.get_monthly_h2stack()
+            h2stack_df  = self.get_monthly_h2stack()
             PSAstack_df = self.get_monthly_PSAstack()
-            stacks_df = pd.concat([h2stack_df, PSAstack_df], axis=1) # stacks on stacks on stacks
+            stacks_df   = pd.concat([h2stack_df, PSAstack_df], axis=1) # stacks on stacks on stacks
             
             stacks_df['PSA_flow'] = (stacks_df['46FC36.PV']
                                  * 1000
@@ -1003,12 +1003,16 @@ class AnnualEquipment(object):
         """Calculate series of monthly toxics for given emissions unit."""
         base_ser = self.get_series_for_toxics()
         mult_fuel = base_ser.loc[self.get_fuel_type_for_toxics()]
-        mult_HHV = self.get_HHV_multiplier_for_toxics()
         tox = self.toxicsEFs
+        print(list(tox.columns))
         tox.set_index('pollutant', inplace=True)
-        tox.loc[tox['units']=='lb/mmscf', 'lbs'] = tox['ef'] * mult_fuel
-        tox.loc[tox['units']=='lb/mmbtu', 'lbs'] = tox['ef'] * mult_fuel * mult_HHV
-        tox['lbs'] = tox['lbs'] / 1000
+        if self.unit_key in ['calciner_1', 'calciner_2']:
+            tox['lbs'] = tox['ef'] * mult_fuel
+        else:
+            mult_HHV = self.get_HHV_multiplier_for_toxics()
+            tox.loc[tox['units']=='lb/mmscf', 'lbs'] = tox['ef'] * mult_fuel
+            tox.loc[tox['units']=='lb/mmbtu', 'lbs'] = tox['ef'] * mult_fuel * mult_HHV
+            tox['lbs'] = tox['lbs'] / 1000
         tox_ordered = tox['lbs'].reindex(self.get_reindexer_for_toxics())
         tox_ser = pd.concat([base_ser, tox_ordered])
         return tox_ser
@@ -1016,23 +1020,20 @@ class AnnualEquipment(object):
     def get_series_for_toxics(self):
         """return Series with sum of monthly natural gas usage."""
         fuel_type = self.get_fuel_type_for_toxics()
-        return pd.Series(
-                    {'equipment':self.unit_key,
-                     'month'    :self.month,
-                     fuel_type  :self.monthly_emis.loc[fuel_type]}
-                        )
-    
-    def get_reindexer_for_toxics(self):
-        """Return correct toxics order for WEIRS."""
-        if self.unit_key in ['h2_plant_2', 'h2_flare']:
-            return cf.NG_toxics_with_EFs
-        else:
-            return cf.FG_toxics_with_EFs
+        base_ser = pd.Series({'equipment':self.unit_key,
+                              'month'    :self.month})
+        if self.unit_key in ['calciner_1', 'calciner_2']:
+            base_ser.loc[fuel_type] = self.get_monthly_coke()[fuel_type].sum()
+        else: 
+            base_ser.loc[fuel_type] = self.monthly_emis.loc[fuel_type]        
+        return base_ser    
     
     def get_fuel_type_for_toxics(self):
         """Return string indicating fuel type to use for calculating toxics."""
         if self.unit_key in ['h2_plant_2', 'h2_flare']:
             return 'fuel_ng'
+        elif self.unit_key in ['calciner_1', 'calciner_2']:
+            return 'coke_tons'
         else:
             return 'fuel_rfg'
     
@@ -1048,7 +1049,16 @@ class AnnualEquipment(object):
             return self.HHV_flare
         else:
             return self.HHV_RFG
-
+    
+    def get_reindexer_for_toxics(self):
+        """Return correct toxics order for WEIRS."""
+        if self.unit_key in ['h2_plant_2', 'h2_flare']:
+            return cf.NG_toxics_with_EFs
+        elif self.unit_key in ['calciner_1', 'calciner_2']:
+            return cf.calciner_toxics_with_EFs
+        else:
+            return cf.FG_toxics_with_EFs
+    
 #### END: methods for calculating toxics
 
 #### BEGIN: methods for calculating H2S
@@ -1787,26 +1797,18 @@ class MonthlyCalciner(AnnualCalciner):
 
         self.coke_annual    = self.annual_eu.coke_annual
         self.monthly_emis   = self.calculate_monthly_equip_emissions()
-        self.monthly_toxics = self.calculate_monthly_calciner_toxics(self.monthly_emis)
+        self.monthly_toxics = self.calculate_monthly_toxics()
         self.monthly_emis_h2s = None
     
     def calculate_monthly_calciner_toxics(self, monthly_emis):
         """Calculate series of monthly toxics for given emissions unit."""
-        base_ser = self.get_series_for_calciner_toxics()
-        mult = base_ser.loc['coke_tons']
+        base_ser = self.get_series_for_toxics()
+        mult = base_ser.loc[self.get_fuel_type_for_toxics()]
         tox = self.toxicsEFs
         tox.set_index('pollutant', inplace=True)
         tox['lbs'] = tox['ef'] * mult
         tox_ser = pd.concat([base_ser, tox['lbs']])
         return tox_ser
-    
-    def get_series_for_calciner_toxics(self):
-        """return Series with sum of monthly calcined coke for calciner"""
-        return pd.Series(
-                    {'equipment':self.unit_key,
-                     'month'    :self.month,
-                     'coke_tons':self.get_monthly_coke()['coke_tons'].sum()}
-                        )
 
 class AnnualFlare(AnnualEquipment):
     """Parse and store annual flare data."""
@@ -2051,7 +2053,8 @@ class AnnualH2Plant(AnnualEquipment):
         stack.set_index('1 h', drop=True, inplace=True)
         stack.index = pd.to_datetime(stack.index)
         stack.index.name = 'tstamp'
-        stack['46FY38B.PV'] = pd.to_numeric(stack.loc[:,'46FY38B.PV'], errors='coerce')
+        tag_name = stack.columns[0]
+        stack[tag_name] = pd.to_numeric(stack.loc[:, tag_name], errors='coerce')
         stack = stack * 1000 # convert Mscfh --> dscfh
         stack = stack.clip(lower=0)
         return stack

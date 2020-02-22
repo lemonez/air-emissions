@@ -36,15 +36,15 @@ class AnnualParser(object):
         self.equip_to_calc      = cf.equip_to_calculate
         self.pollutants_to_calc = cf.pollutants_to_calculate
         self.pollutants_all     = cf.pollutants_all
-    #    h2s_equips_to_calc     = cf.h2s_equips_to_calc
-    #    EFs_to_check           = cf.EFs_to_check
         self.is_toxics          = cf.calculate_toxics
-        self.is_FG_toxics       = cf.calculate_NG_toxics
-        self.is_NG_toxics       = cf.calculate_FG_toxics
+        self.is_FG_toxics       = cf.calculate_FG_toxics
+        self.is_NG_toxics       = cf.calculate_NG_toxics
         self.is_calciner_toxics = cf.calculate_calciner_toxics
         self.write_month_names  = cf.write_month_names
         self.month_map          = cf.month_map
         self.verbose_logging    = cf.verbose_logging
+    #    h2s_equips_to_calc     = cf.h2s_equips_to_calc
+    #    EFs_to_check           = cf.EFs_to_check
         
         self.all_equip_dict     = {}
         self.all_equip_dict_h2s = {}
