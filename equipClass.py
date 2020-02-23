@@ -131,6 +131,8 @@ class AnnualEquipment(object):
                             # df: EFs for fuel gas toxics
         self.toxicsEFs_NG   = self._parse_annual_NG_toxics_EFs()
                             # df: EFs for natural gas toxics
+        self.toxicsEFs_PSA  = self._parse_annual_PSA_toxics_EFs()
+                            # df: EFs for PSA offgas toxics
         self.toxicsEFs_calciners = self._parse_annual_calciner_toxics_EFs()
                             # df: EFs for calciner toxics
         self.EFs            = self._parse_annual_EFs()
@@ -237,6 +239,18 @@ class AnnualEquipment(object):
                        )
         return caltox[['pollutant', 'ef', 'units']]
     
+    def _parse_annual_PSA_toxics_EFs(self):
+        """Parse EFs for toxics; return pd.DataFrame."""
+        toxics = pd.read_excel(self.fpath_toxicsEFs_NG,
+                               header=4,
+                               usecols=[0,2,3])
+        toxics.rename(columns={'Chemical' : 'pollutant',
+                               'EF'       : 'ef',
+                               'EF Units' : 'units'},
+                      inplace=True)
+        toxics = toxics[toxics['ef'].notna()]
+        return toxics
+    
     def _parse_annual_NG_toxics_EFs(self):
         """Parse EFs for toxics; return pd.DataFrame."""
         toxics = pd.read_excel(self.fpath_toxicsEFs_NG,
@@ -254,7 +268,6 @@ class AnnualEquipment(object):
         toxics = pd.read_excel(self.fpath_toxicsEFs_FG,
                                header=3, skipfooter=5,
                                usecols=[0,2,3])
-        
         # because the source test EF for Pb for boiler #5 equals
         # the EF for the rest of the equipment, drop that row and 
         # treat it the same; could add exception for boiler #5
