@@ -40,6 +40,7 @@ class AnnualParser(object):
         self.is_FG_toxics       = cf.calculate_FG_toxics
         self.is_NG_toxics       = cf.calculate_NG_toxics
         self.is_calciner_toxics = cf.calculate_calciner_toxics
+        self.is_h2plant2_toxics = cf.calculate_h2plant2_toxics
         self.write_month_names  = cf.write_month_names
         self.month_map          = cf.month_map
         self.verbose_logging    = cf.verbose_logging
@@ -53,10 +54,12 @@ class AnnualParser(object):
         if self.is_toxics:
             if self.is_FG_toxics:
                 self.toxics_text = ' fuel gas toxics '
-            if self.is_NG_toxics:
+            elif self.is_NG_toxics:
                 self.toxics_text = ' natural gas toxics '
-            if self.is_calciner_toxics:
+            elif self.is_calciner_toxics:
                 self.toxics_text = ' calciner toxics '
+            elif self.is_h2plant2_toxics:
+                self.toxics_text = ' h2_plant_2 toxics '
 
         self.ordered_equip = self.annual_equip.ordered_equip
     
@@ -71,6 +74,8 @@ class AnnualParser(object):
                 format_str = '_TOXICS_NG'
             elif self.is_calciner_toxics:
                 format_str = '_TOXICS_calciners'
+            elif self.is_h2plant2_toxics:
+                format_str = '_TOXICS_h2plant2'
         for df in self.groupby_annual():
             outname = (self.out_dir_child
                        +str(self.year_to_calc)+'_'
@@ -246,6 +251,12 @@ class AnnualParser(object):
                 for pol in cf.calciner_toxics_with_EFs:
                     arr_col_lev0 += [pol]
                     arr_col_lev1 += ['lbs']
+            elif self.is_h2plant2_toxics:
+                arr_col_lev0 = ['PSA Offgas', 'Natural Gas']
+                arr_col_lev1 = ['mscf'] * 2
+                for pol in cf.h2plant2_toxics_reindexer[4:]:
+                    arr_col_lev0 += [pol]
+                    arr_col_lev1 += ['lbs']
             arr_col = [arr_col_lev0, arr_col_lev1]
         
         return pd.MultiIndex.from_arrays(arr_col, names=('Parameter', 'Units'))
@@ -287,6 +298,9 @@ class AnnualParser(object):
             elif self.is_calciner_toxics:
                 col_order += ['Calcined Coke']
                 col_order += cf.calciner_toxics_with_EFs
+            elif self.is_h2plant2_toxics:
+                col_order += ['Refinery Fuel Gas', 'Natural Gas']
+                col_order += cf.h2plant2_toxics_reindexer[4:]
 
         return annual_df.rename(columns=cf.output_colnames_map)[col_order]
     
@@ -356,6 +370,8 @@ class AnnualParser(object):
                     ordered_equip_to_calculate = ['h2_plant_2']
                 elif self.is_calciner_toxics:
                     ordered_equip_to_calculate = ['calciner_1', 'calciner_2']
+                elif self.is_h2plant2_toxics:
+                    ordered_equip_to_calculate = ['h2_plant_2']
             for unit_key in ordered_equip_to_calculate:
                 each_equip_ser       = []
                 each_equip_tuple_h2s = []

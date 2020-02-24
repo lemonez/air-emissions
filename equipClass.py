@@ -1,5 +1,6 @@
 import time, datetime, glob, math
 import pandas as pd
+import numpy as np
 from collections import OrderedDict
 
 # print timestamp for checking import timing
@@ -664,18 +665,11 @@ class AnnualEquipment(object):
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 #++EMISSIONS-CALCULATION METHODS CALLED/SHARED BY MONTHLY CHILD CLASSES++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
 # TODO: refactor this method; it is a hot mess
     def calculate_monthly_equip_emissions(self):
         """Return pd.Series of equipment unit emissions for specified month."""
-        hourly = self.merge_fuel_and_CEMS()
-        if self.unit_key in self.equip_ptags.keys():
-            hourly = self.convert_from_ppm(hourly)
-        # workaround for n_vac NOx CEMS transition
-        if self.unit_key == 'n_vac' and self.month < 5:
-            hourly = pd.concat([self.get_monthly_fuel(),
-                                pd.DataFrame({'no_CEMS_data' : []})],
-                                axis=1)
-        monthly = hourly.sum()
+        monthly = self.aggregate_hourly_to_monthly()
         # calculate all pollutants except for H2SO4
         if 'calciner' in self.unit_key:
             coke_tons = self.get_monthly_coke()['coke_tons'].sum()
@@ -695,7 +689,7 @@ class AnnualEquipment(object):
                         EF_multiplier = 1
                     else:
                         if self.unit_key == 'h2_plant_2':
-                            fuel_type = 'fuel_ng'
+                            fuel_type = 'flow'
                         else:
                             fuel_type = 'fuel_rfg'
                     
@@ -794,48 +788,57 @@ class AnnualEquipment(object):
             return whole        
         return monthly
 
+    def aggregate_hourly_to_monthly(self):
+        """"""
+        hourly = self.merge_fuel_and_CEMS()
+        if self.unit_key == 'h2_plant_2':
+            hourly = self.convert_from_ppm(hourly)
+        elif self.unit_key == 'n_vac' and self.month < 5:
+            hourly = pd.concat([self.get_monthly_fuel(),
+                                pd.DataFrame({'no_CEMS_data' : []})],
+                                axis=1)
+        elif self.unit_key in self.equip_ptags.keys():
+            hourly = self.convert_from_ppm(hourly)
+        # workaround for n_vac NOx CEMS transition
+        return hourly.sum()
+    
 #TODO: refactor into 'convert_from_ppm' and 'convert_from_mscfh' methods   
     def convert_from_ppm(self, both_df):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
-        if self.unit_key == 'h2_plant_2':
-            h2stack_df  = self.get_monthly_h2stack()
-            PSAstack_df = self.get_monthly_PSAstack()
-            stacks_df   = pd.concat([h2stack_df, PSAstack_df], axis=1) # stacks on stacks on stacks
-            
-            stacks_df['PSA_flow'] = (stacks_df['46FC36.PV']
+        if 'calciner' in self.unit_key:
+            both_df = self.calculate_calciner_total_stack_flow(both_df)
+        elif self.unit_key == 'h2_plant_2':
+            stack = self.get_monthly_PSAstack().copy()
+            stack['PSA_flow'] = (stack['46FC36.PV']
                                  * 1000
                                  * self.HHV_PSA
                                  / 1000000
                                  * self.f_factor_PSA
                                  / 1000)
-            stacks_df['NG_flow']  = ((stacks_df['46FI187.PV'] + stacks_df['46FS38.PV'])
+            stack['NG_flow']  = ((stack['46FI187.PV'] + stack['46FS38.PV'])
                                  * 1000
                                  * self.HHV_NG
                                  / 1000000
                                  * self.f_factor_NG
                                  / 1000)
+            stack['PSA_mscf'] = stack['46FC36.PV']
+            stack['NG_mscf'] = stack['46FI187.PV'] + stack['46FS38.PV']
+            both_df = pd.concat([both_df, stack], axis=1)
             
-            # combine with fuel, correct for O2
-            both_df = pd.concat([both_df, stacks_df], axis=1)
-            both_df['dscfh'] = ((both_df['PSA_flow'] + both_df['NG_flow'])
-                                * 20.9 / (20.9 - both_df['o2_%']))
+            both_df['dscfh_PSA'] = (both_df['PSA_flow'] * 20.9 / (20.9 - both_df['o2_%']))
+            both_df['dscfh_NG']  = (both_df['NG_flow']  * 20.9 / (20.9 - both_df['o2_%']))
+            both_df['dscfh']  = both_df['dscfh_PSA'] + both_df['dscfh_NG']
         else:
-            fuel_type = 'fuel_rfg'
-            f_factor  = self.f_factor_RFG
-            HHV       = self.HHV_RFG
-            
-            both_df['dscfh'] = (both_df[fuel_type]
+            both_df['dscfh'] = (both_df['fuel_rfg']
                                 * 1000 
-                                * HHV
+                                * self.HHV_RFG
                                 / 1000000
-                                * f_factor
+                                * self.f_factor_RFG
                                 * 20.9 / (20.9 - both_df['o2_%']))
 # would like to break this into another method so that 
 # calculate_calciner_total_stack_flow() does not need a df passed to it as an arg
 # right now it is difficult to test, and this method is too nested
-        # if there are CEMS pols to convert)
-        if 'calciner' in self.unit_key:
-            both_df = self.calculate_calciner_total_stack_flow(both_df)
+# if there are CEMS pols to convert
         
         ppm_conv_facts = {
                          #       MW      const   hr/min
@@ -856,7 +859,7 @@ class AnnualEquipment(object):
                                     * both_df['dscfh'])
                                         # ==> lb
         return both_df
-
+    
     def merge_fuel_and_CEMS(self):
         """Merge fuel and CEMS data, return pd.DataFrame."""
         return pd.concat([self.get_monthly_fuel(),
@@ -891,7 +894,7 @@ class AnnualEquipment(object):
         
         if self.unit_key == 'calciner_1':
 # TODO: these should not be hardcoded...they change yearly w/ EFs
-            if self.month == 9:
+            if self.year >= 2019 and self.month >= 9:
                 stack_flow = 117156 # dscf / ton coke    
             else:
                 stack_flow = 98055 # dscf / ton coke
@@ -1014,8 +1017,9 @@ class AnnualEquipment(object):
 
     def calculate_monthly_toxics(self):
         """Calculate series of monthly toxics for given emissions unit."""
+        fuel = self.get_fuel_type_for_toxics()
         base_ser = self.get_series_for_toxics()
-        mult_fuel = base_ser.loc[self.get_fuel_type_for_toxics()]
+        mult_fuel = base_ser.loc[fuel]
         tox = self.toxicsEFs.copy()
         tox.set_index('pollutant', inplace=True)
         if self.unit_key in ['calciner_1', 'calciner_2']:
@@ -1029,6 +1033,15 @@ class AnnualEquipment(object):
         tox_ser = pd.concat([base_ser, tox_ordered])
         return tox_ser
     
+    def get_fuel_type_for_toxics(self):
+        """Return string indicating fuel type to use for calculating toxics."""
+        if self.unit_key in ['calciner_1', 'calciner_2']:
+            return 'coke_tons'
+        # elif self.unit_key == 'h2_flare':
+            # return 'fuel_ng'
+        else:
+            return 'fuel_rfg'
+    
     def get_series_for_toxics(self):
         """return Series with sum of monthly natural gas usage."""
         fuel_type = self.get_fuel_type_for_toxics()
@@ -1040,23 +1053,12 @@ class AnnualEquipment(object):
             base_ser.loc[fuel_type] = self.monthly_emis.loc[fuel_type]        
         return base_ser    
     
-    def get_fuel_type_for_toxics(self):
-        """Return string indicating fuel type to use for calculating toxics."""
-        if self.unit_key in ['h2_plant_2', 'h2_flare']:
-            return 'fuel_ng'
-        elif self.unit_key in ['calciner_1', 'calciner_2']:
-            return 'coke_tons'
-        else:
-            return 'fuel_rfg'
-    
     def get_HHV_multiplier_for_toxics(self):
         """Return HHV multiplier to convert mscf to mmBtu."""
         if self.unit_key in ['coker_1', 'coker_2', 'coker_e', 'coker_w']:
             return self.HHV_cokerFG
         elif self.unit_key == 'crude_vtg':
             return self.HHV_CVTG
-        elif self.unit_key == 'h2_plant_2':
-            return self.HHV_NG
         elif self.unit_key == 'h2_flare':
             return self.HHV_flare
         else:
@@ -1064,7 +1066,7 @@ class AnnualEquipment(object):
     
     def get_reindexer_for_toxics(self):
         """Return correct toxics order for WEIRS."""
-        if self.unit_key in ['h2_plant_2', 'h2_flare']:
+        if self.unit_key == 'h2_flare':
             return cf.NG_toxics_with_EFs
         elif self.unit_key in ['calciner_1', 'calciner_2']:
             return cf.calciner_toxics_with_EFs
@@ -1808,9 +1810,9 @@ class MonthlyCalciner(AnnualCalciner):
                                             self.ts_interval)
 
         self.coke_annual    = self.annual_eu.coke_annual
-        self.monthly_emis   = self.calculate_monthly_equip_emissions()
-        self.monthly_toxics = self.calculate_monthly_toxics()
-        self.monthly_emis_h2s = None
+        # self.monthly_emis   = self.calculate_monthly_equip_emissions()
+        # self.monthly_toxics = self.calculate_monthly_toxics()
+        # self.monthly_emis_h2s = None
 
 class AnnualFlare(AnnualEquipment):
     """Parse and store annual flare data."""
@@ -2095,7 +2097,9 @@ class MonthlyH2Plant(AnnualH2Plant):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_NG
+        self.toxicsEFs_NG   = self.annual_equip.toxicsEFs_NG
+        self.toxicsEFs_PSA  = self.annual_equip.toxicsEFs_PSA
+        self.flareEFs       = self.annual_equip.flareEFs
         
         self.h2stack_annual = self.annual_eu.h2stack_annual
         self.PSAstack_annual= self.annual_eu.PSAstack_annual
@@ -2118,9 +2122,98 @@ class MonthlyH2Plant(AnnualH2Plant):
                                             self.annual_equip.fpath_NG_chem,
                                             self.ts_interval)
         
-        self.monthly_emis     = self.calculate_monthly_equip_emissions()
+        self.monthly_emis     = self.calculate_monthly_emissions()
         self.monthly_toxics   = self.calculate_monthly_toxics()
-        self.monthly_emis_h2s = None
+        self.monthly_toxics.to_csv('./output/h2plant2_toxics'
+                                   + str(self.month).zfill(2)+'.csv',
+                                   header=True)
+        # self.monthly_emis_h2s = None
+
+    ## emissions calc methods overrides parent methods
+    def calculate_monthly_emissions(self):
+        monthly = self.aggregate_hourly_to_monthly()
+        # calculate all pollutants except for H2SO4
+        efs = self.flareEFs.copy()
+        NG_efs = (efs.loc[efs['flare_on']==False]
+                     .loc[efs['pollutant'].isin(['pm', 'voc'])]
+                     .set_index('pollutant'))
+        for pol in ['pm', 'voc']:
+            # use normal EFs for PSA offgas
+            monthly.loc[pol] =  (
+                                  monthly.loc['PSA_mscf']             # fuel value
+                                * self.equip_EF[self.unit_key][pol]   # EF value
+                                * self.get_conversion_multiplier(pol) # EF conversion
+                                )
+            # use flare EFs for NG
+            if NG_efs.loc[pol, 'units'] == 'lb/mmscf':
+                conv_multiplier = 1/1000
+            else:
+                raise ValueError('Emission Factor in unexpected units.')
+            monthly.loc[pol] += (
+                                  monthly.loc['NG_mscf']              # fuel value
+                                * NG_efs.loc[pol, 'ef']               # EF value
+                                * conv_multiplier                     # EF conversion
+                                )
+        # set other values in series
+        monthly.loc['equipment'] = self.unit_key
+        monthly.loc['month']     = self.month
+        monthly.loc['fuel_rfg']  = monthly.loc['PSA_mscf']
+        monthly.loc['fuel_ng']   = monthly.loc['NG_mscf']
+        monthly.loc['pm25']      = monthly.loc['pm']
+        monthly.loc['pm10']      = monthly.loc['pm']
+        monthly.loc['h2so4']     = monthly.loc['so2'] * 0.026
+        monthly = monthly.reindex(self.col_name_order)
+        monthly.loc[self.col_name_order[4:-1]] = (
+            monthly.loc[self.col_name_order[4:-1]] / 2000)             # lbs --> tons
+        return monthly
+    
+    def calculate_monthly_toxics(self):
+        toxics = {}
+        for fuel in self.get_fuel_type_for_toxics():
+            base_ser = self.get_series_for_toxics(fuel)
+            mult_fuel = base_ser.loc[fuel]
+            mult_HHV = self.get_HHV_multiplier_for_toxics(fuel)
+            tox = self.get_EFs_for_toxics(fuel).copy()
+            tox.set_index('pollutant', inplace=True)
+            tox.loc[tox['units']=='lb/mmscf', 'lbs'] = tox['ef'] * mult_fuel
+            tox.loc[tox['units']=='lb/mmbtu', 'lbs'] = tox['ef'] * mult_fuel * mult_HHV
+            tox['lbs'] = tox['lbs'] / 1000
+            tox_ordered = tox['lbs'].reindex(self.get_reindexer_for_toxics(fuel))
+            tox_ser = pd.concat([base_ser, tox_ordered])
+            tox_ser.name = 'from'+fuel[4:]
+            toxics[fuel] = tox_ser
+        alltox = pd.concat(toxics, axis=1, sort=False).replace(np.nan, 0)
+        alltox['total'] = alltox.sum(axis=1)
+        alltox.loc['equipment','total'] = alltox.loc['equipment', 'fuel_ng']
+        alltox.loc['month','total']     = alltox.loc['month', 'fuel_ng']
+        alltox = alltox.reindex(cf.h2plant2_toxics_reindexer)
+        return alltox['total']
+    
+    def get_series_for_toxics(self, fuel_type):
+        return pd.Series({'equipment':self.unit_key,
+                          'month'    :self.month,
+                          fuel_type  :self.monthly_emis.loc[fuel_type]})
+    
+    def get_fuel_type_for_toxics(self):
+        return ['fuel_rfg', 'fuel_ng']
+
+    def get_HHV_multiplier_for_toxics(self, fuel_type):
+        if fuel_type == 'fuel_rfg':
+            return self.HHV_PSA
+        elif fuel_type == 'fuel_ng':
+            return self.HHV_NG
+
+    def get_EFs_for_toxics(self, fuel_type):
+        if fuel_type == 'fuel_rfg':
+            return self.toxicsEFs_PSA
+        elif fuel_type == 'fuel_ng':
+            return self.toxicsEFs_NG
+        
+    def get_reindexer_for_toxics(self, fuel_type):
+        if fuel_type == 'fuel_rfg':
+            return cf.PSA_toxics_with_EFs
+        elif fuel_type == 'fuel_ng':
+            return cf.NG_toxics_with_EFs
 
 ##============================================================================##
 

@@ -8,7 +8,7 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
-first_month_to_calculate = 1
+first_month_to_calculate = 11
 last_month_to_calculate  = 12
 data_year     = 2019                            # year_to_calculate ## int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/'    # all input data files
@@ -25,8 +25,9 @@ GHG = False                                     # calculate GHG?
 calculate_toxics = True                         # calculate toxics?
 if calculate_toxics:
     calculate_FG_toxics = False
-    calculate_NG_toxics = False
+    calculate_NG_toxics = False # delete this ? now h2_plant_2 has its own flag
     calculate_calciner_toxics = True
+    calculate_h2plant2_toxics = False
     out_dir_child = '2019_toxics/'
 
 calculate_PM_fractions = False                  # calculate separate PM fractions?
@@ -424,6 +425,67 @@ NG_toxics_with_EFs = [
     'Nickel',
     'Selenium',
     'Zinc'
+    ]
+
+PSA_toxics_with_EFs = [
+    # organics
+    'Acenaphthene',
+    'Acetaldehyde',
+    'Acenaphthylene',
+    'Anthracene',
+    'Benzene',
+    'Benzo(a)anthracene',
+    'Benzo(a)pyrene',
+    'Benzo(b)fluoranthene',
+    'Benzo(g,h,i)perylene',
+    'Benzo(k)fluoranthene',
+    'Chromium (hexavalent)',
+    'Chrysene',
+    'Dibenz(a,h)anthracene',
+    'Ethylbenzene',
+    'Fluoranthene',
+    'Fluorene',
+    'Formaldehyde',
+    'Hydrogen sulfide',
+    'Indeno(1,2,3-cd)pyrene',
+    'Naphthalene',
+    'Phenanthrene',
+    'Phenol',
+    'Propylene',
+    'Pyrene',
+    'Toluene',
+    'Xylenes (mixed isomers)',
+    # metals
+    'Arsenic',
+    'Antimony',
+    'Barium',
+    'Beryllium',
+    'Cadmium',
+    'Chromium',
+    'Copper',
+    'Lead',
+    'Manganese',
+    'Mercury',
+    'Nickel',
+    'Phosphorus',
+    'Selenium',
+    'Silver',
+    'Thallium',
+    'Zinc'
+    ]
+
+h2plant2_toxics_reindexer = [
+    'equipment', 'month', 'fuel_rfg', 'fuel_ng',
+    'Acenaphthene', 'Acenaphthylene', 'Acetaldehyde', 'Anthracene', 'Benzene',
+    'Benzo(a)anthracene', 'Benzo(a)pyrene', 'Benzo(b)fluoranthene',
+    'Benzo(g,h,i)perylene', 'Benzo(k)fluoranthene',
+    'Chromium (hexavalent)', 'Chrysene', 'Dibenz(a,h)anthracene', 'Ethylbenzene',
+    'Fluoranthene', 'Fluorene', 'Formaldehyde', 'Hydrogen sulfide',
+    'Indeno(1,2,3-cd)pyrene', 'Naphthalene', 'Phenanthrene', 'Phenol',
+    'Propylene', 'Pyrene', 'Toluene', 'Xylenes (mixed isomers)',
+    'Antimony', 'Arsenic', 'Barium', 'Beryllium', 'Cadmium',
+    'Chromium', 'Copper', 'Lead', 'Manganese', 'Mercury', 'Nickel',
+    'Phosphorus', 'Selenium', 'Silver', 'Thallium', 'Zinc'
     ]
 
 calciner_toxics_with_EFs = [
