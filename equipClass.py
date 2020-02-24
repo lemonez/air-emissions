@@ -2124,7 +2124,7 @@ class MonthlyH2Plant(AnnualH2Plant):
         self.monthly_toxics.to_csv('./output/h2plant2_toxics'
                                    + str(self.month).zfill(2)+'.csv',
                                    header=True)
-        # self.monthly_emis_h2s = None
+        self.monthly_emis_h2s = None
 
     ## emissions calc methods overrides parent methods
     def calculate_monthly_emissions(self):
