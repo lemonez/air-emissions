@@ -666,6 +666,27 @@ class AnnualEquipment(object):
 #++EMISSIONS-CALCULATION METHODS CALLED/SHARED BY MONTHLY CHILD CLASSES++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
+################################################################################
+
+    def calculate_monthly_equip_emissions(self):
+        """Return pd.Series of equipment unit emissions for specified month."""
+        hourly = self.merge_fuel_and_CEMS()
+        if self.unit_key in self.equip_ptags.keys():
+            hourly = self.convert_from_ppm(hourly)
+        # workaround for n_vac NOx CEMS transition
+        if self.unit_key == 'n_vac' and self.month < 5:
+            hourly = pd.concat([self.get_monthly_fuel(),
+                                pd.DataFrame({'no_CEMS_data' : []})],
+                                axis=1)
+        monthly = hourly.sum()
+        # calculate all pollutants except for H2SO4
+        if 'calciner' in self.unit_key:
+            coke_tons = self.get_monthly_coke()['coke_tons'].sum()
+            stack_dscf = monthly.loc['dscfh']
+
+        for pol in ['nox', 'co', 'so2', 'voc', 'pm', 'pm25', 'pm10']:
+################################################################################
+
 # TODO: refactor this method; it is a hot mess
     def calculate_monthly_equip_emissions(self):
         """Return pd.Series of equipment unit emissions for specified month."""
@@ -790,24 +811,19 @@ class AnnualEquipment(object):
 
     def aggregate_hourly_to_monthly(self):
         """"""
-        hourly = self.merge_fuel_and_CEMS()
-        if self.unit_key == 'h2_plant_2':
-            hourly = self.convert_from_ppm(hourly)
-        elif self.unit_key == 'n_vac' and self.month < 5:
-            hourly = pd.concat([self.get_monthly_fuel(),
-                                pd.DataFrame({'no_CEMS_data' : []})],
-                                axis=1)
-        elif self.unit_key in self.equip_ptags.keys():
-            hourly = self.convert_from_ppm(hourly)
         # workaround for n_vac NOx CEMS transition
-        return hourly.sum()
+        if self.unit_key == 'n_vac' and self.year <= 2019 and self.month < 5:
+            return pd.concat([self.get_monthly_fuel(),
+                             pd.DataFrame({'no_CEMS_data' : []})],
+                             axis=1).sum()
+        if self.unit_key in self.equip_ptags.keys():
+            return self.convert_from_ppm(self.merge_fuel_and_CEMS()).sum()
+        return self.merge_fuel_and_CEMS().sum()
     
 #TODO: refactor into 'convert_from_ppm' and 'convert_from_mscfh' methods   
     def convert_from_ppm(self, both_df):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
-        if 'calciner' in self.unit_key:
-            both_df = self.calculate_calciner_total_stack_flow(both_df)
-        elif self.unit_key == 'h2_plant_2':
+        if self.unit_key == 'h2_plant_2':
             stack = self.get_monthly_PSAstack().copy()
             stack['PSA_flow'] = (stack['46FC36.PV']
                                  * 1000
@@ -835,6 +851,8 @@ class AnnualEquipment(object):
                                 / 1000000
                                 * self.f_factor_RFG
                                 * 20.9 / (20.9 - both_df['o2_%']))
+        if 'calciner' in self.unit_key:
+            both_df = self.calculate_calciner_total_stack_flow(both_df)
 # would like to break this into another method so that 
 # calculate_calciner_total_stack_flow() does not need a df passed to it as an arg
 # right now it is difficult to test, and this method is too nested
