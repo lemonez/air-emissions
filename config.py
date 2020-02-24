@@ -8,7 +8,7 @@ import pandas as pd
 ####################
 
 #### configure data/calculations ####
-first_month_to_calculate = 11
+first_month_to_calculate = 1
 last_month_to_calculate  = 12
 data_year     = 2019                            # year_to_calculate ## int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/'    # all input data files

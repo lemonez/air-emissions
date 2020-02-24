@@ -666,27 +666,6 @@ class AnnualEquipment(object):
 #++EMISSIONS-CALCULATION METHODS CALLED/SHARED BY MONTHLY CHILD CLASSES++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-################################################################################
-
-    def calculate_monthly_equip_emissions(self):
-        """Return pd.Series of equipment unit emissions for specified month."""
-        hourly = self.merge_fuel_and_CEMS()
-        if self.unit_key in self.equip_ptags.keys():
-            hourly = self.convert_from_ppm(hourly)
-        # workaround for n_vac NOx CEMS transition
-        if self.unit_key == 'n_vac' and self.month < 5:
-            hourly = pd.concat([self.get_monthly_fuel(),
-                                pd.DataFrame({'no_CEMS_data' : []})],
-                                axis=1)
-        monthly = hourly.sum()
-        # calculate all pollutants except for H2SO4
-        if 'calciner' in self.unit_key:
-            coke_tons = self.get_monthly_coke()['coke_tons'].sum()
-            stack_dscf = monthly.loc['dscfh']
-
-        for pol in ['nox', 'co', 'so2', 'voc', 'pm', 'pm25', 'pm10']:
-################################################################################
-
 # TODO: refactor this method; it is a hot mess
     def calculate_monthly_equip_emissions(self):
         """Return pd.Series of equipment unit emissions for specified month."""
@@ -812,7 +791,7 @@ class AnnualEquipment(object):
     def aggregate_hourly_to_monthly(self):
         """"""
         # workaround for n_vac NOx CEMS transition
-        if self.unit_key == 'n_vac' and self.year <= 2019 and self.month < 5:
+        if self.unit_key == 'n_vac' and self.annual_equip.year <= 2019 and self.month < 5:
             return pd.concat([self.get_monthly_fuel(),
                              pd.DataFrame({'no_CEMS_data' : []})],
                              axis=1).sum()
@@ -851,12 +830,11 @@ class AnnualEquipment(object):
                                 / 1000000
                                 * self.f_factor_RFG
                                 * 20.9 / (20.9 - both_df['o2_%']))
-        if 'calciner' in self.unit_key:
-            both_df = self.calculate_calciner_total_stack_flow(both_df)
 # would like to break this into another method so that 
 # calculate_calciner_total_stack_flow() does not need a df passed to it as an arg
 # right now it is difficult to test, and this method is too nested
-# if there are CEMS pols to convert
+        if 'calciner' in self.unit_key:
+            both_df = self.calculate_calciner_total_stack_flow(both_df)
         
         ppm_conv_facts = {
                          #       MW      const   hr/min
@@ -865,6 +843,7 @@ class AnnualEquipment(object):
                          'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
                           }
         
+# if there are CEMS pols to convert
         ptags_list = self.equip_ptags[self.unit_key]
         cems_pol_list = [self.ptags_pols[tag]
                          for tag in ptags_list
@@ -912,7 +891,7 @@ class AnnualEquipment(object):
         
         if self.unit_key == 'calciner_1':
 # TODO: these should not be hardcoded...they change yearly w/ EFs
-            if self.year >= 2019 and self.month >= 9:
+            if self.annual_equip.year >= 2019 and self.month >= 9:
                 stack_flow = 117156 # dscf / ton coke    
             else:
                 stack_flow = 98055 # dscf / ton coke
@@ -1828,9 +1807,9 @@ class MonthlyCalciner(AnnualCalciner):
                                             self.ts_interval)
 
         self.coke_annual    = self.annual_eu.coke_annual
-        # self.monthly_emis   = self.calculate_monthly_equip_emissions()
-        # self.monthly_toxics = self.calculate_monthly_toxics()
-        # self.monthly_emis_h2s = None
+        self.monthly_emis   = self.calculate_monthly_equip_emissions()
+        self.monthly_toxics = self.calculate_monthly_toxics()
+        self.monthly_emis_h2s = None
 
 class AnnualFlare(AnnualEquipment):
     """Parse and store annual flare data."""
