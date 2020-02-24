@@ -739,7 +739,7 @@ class AnnualEquipment(object):
         if self.month != 5:
             return (self.calculate_monthly_equip_emissions())
         # NOx CEMS implemented mid-way through month
-        elif self.annual_equip.year == 2019 and self.month == 5:
+        elif self.year == 2019 and self.month == 5:
             hourly = self.merge_fuel_and_CEMS() 
             # pre-CEMS implementation
             pre  = hourly.copy().loc[:'2019-05-12 14:00:00' ]
@@ -891,7 +891,7 @@ class AnnualEquipment(object):
         
         if self.unit_key == 'calciner_1':
 # TODO: these should not be hardcoded...they change yearly w/ EFs
-            if self.annual_equip.year >= 2019 and self.month >= 9:
+            if self.year >= 2019 and self.month >= 9:
                 stack_flow = 117156 # dscf / ton coke    
             else:
                 stack_flow = 98055 # dscf / ton coke
@@ -1200,12 +1200,14 @@ class AnnualEquipment(object):
         """Convert H2S from ppm to lbs."""
         h2s_ppm   = self.get_monthly_h2s()
         fuel_mscf = self.get_monthly_fuel()['fuel_rfg'].sum()
+        if self.unit_key == 'h2_plant_2':
+            fuel_mscf = self.monthly_emis.loc['fuel_rfg']
         h2s_lbs   = (
                        h2s_ppm       # monthly H2S  
                        * fuel_mscf   # mscf
                        * 34.1        # lb/lb-mol
-                       / (379*1000)  # (scf/lb-mol)
-                       * (1-0.99)    # (99% control efficiency)
+                       / (379 * 1000)  # (scf/lb-mol)
+                       * (1 - 0.99)    # (99% control efficiency)
                     )
         return h2s_lbs
     
@@ -1255,7 +1257,7 @@ class MonthlyHB(AnnualHB):
         self.month          = month
         self.annual_eu      = annual_eu # aka Annual{equiptype}()
         self.annual_equip   = annual_eu.annual_equip # aka AnnualEquipment()
-        
+        self.year           = self.annual_equip.year        
         self.ts_interval    = self.annual_equip.ts_intervals[self.month
                                                 - self.annual_equip.month_offset]
         self.EFs            = self.annual_equip.EFs[self.month][0]
@@ -1265,6 +1267,7 @@ class MonthlyHB(AnnualHB):
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
         self.toxicsEFs      = self.annual_equip.toxicsEFs_FG
+        self.year           = self.annual_equip.year
         
         # fuel-sample lab results (pd.DataFrame)
         self.RFG_monthly    = ff.get_monthly_lab_results(self.annual_equip.RFG_annual, self.ts_interval)
@@ -1313,10 +1316,9 @@ class MonthlyCoker(AnnualCoker):
         self.unit_key       = unit_key
         self.annual_eu      = annual_eu
         self.annual_equip   = annual_eu.annual_equip
-        
+        self.year           = self.annual_equip.year
         self.ts_interval    = self.annual_equip.ts_intervals[self.month
                                                 - self.annual_equip.month_offset]
-
         self.EFs            = self.annual_equip.EFs[self.month][0]
         self.EFunits        = self.annual_equip.EFs[self.month][1]
         self.equip_EF       = self.annual_equip.EFs[self.month][2]
@@ -1527,7 +1529,7 @@ class MonthlyCokerOLD(AnnualCoker):
         self.unit_key       = unit_key
         self.annual_eu      = annual_eu
         self.annual_equip   = annual_eu.annual_equip
-        
+        self.year           = self.annual_equip.year
         self.ts_interval    = self.annual_equip.ts_intervals[self.month
                                                 - self.annual_equip.month_offset]
 #         self.EFs            = self.annual_equip.EFs[self.month][0]
@@ -1644,11 +1646,9 @@ class MonthlyCoker_CO2(AnnualCoker_CO2):
         self.unit_key       = unit_key
         self.annual_eu      = annual_eu # aka AnnualCoker()
         self.annual_equip   = annual_eu.annual_equip # aka AnnualEquipment()
-        
-        # instance attributes calculated at month level
+        self.year           = self.annual_equip.year
         self.ts_interval    = self.annual_equip.ts_intervals[self.month
                                             - self.annual_equip.month_offset]
-        
         # gas-sample lab results (DataFrames)
         self.NG_monthly     = ff.get_monthly_lab_results(
                                             self.annual_equip.NG_annual,
@@ -1783,7 +1783,7 @@ class MonthlyCalciner(AnnualCalciner):
         self.unit_key       = unit_key
         self.annual_eu      = annual_eu
         self.annual_equip   = annual_eu.annual_equip
-        
+        self.year           = self.annual_equip.year
         self.ts_interval    = self.annual_equip.ts_intervals[self.month
                                                 - self.annual_equip.month_offset]        
 # why is it not using self.EFs? should it be calling this?
@@ -1828,7 +1828,7 @@ class MonthlyFlare(AnnualFlare):
         self.unit_key       = unit_key
         self.annual_eu      = annual_eu
         self.annual_equip   = annual_eu.annual_equip
-        
+        self.year           = self.annual_equip.year
         self.ts_interval    = self.annual_equip.ts_intervals[self.month
                                                 - self.annual_equip.month_offset]
         self.col_name_order = self.annual_equip.col_name_order
@@ -2085,10 +2085,9 @@ class MonthlyH2Plant(AnnualH2Plant):
         self.unit_key       = unit_key
         self.annual_eu      = annual_eu
         self.annual_equip   = annual_eu.annual_equip
-        
+        self.year           = self.annual_equip.year
         self.ts_interval    = self.annual_equip.ts_intervals[self.month
                                                 - self.annual_equip.month_offset]
-        
         self.EFunits        = self.annual_equip.EFs[self.month][1]
         self.equip_EF       = self.annual_equip.EFs[self.month][2]
         self.col_name_order = self.annual_equip.col_name_order
@@ -2121,9 +2120,6 @@ class MonthlyH2Plant(AnnualH2Plant):
         
         self.monthly_emis     = self.calculate_monthly_emissions()
         self.monthly_toxics   = self.calculate_monthly_toxics()
-        self.monthly_toxics.to_csv('./output/h2plant2_toxics'
-                                   + str(self.month).zfill(2)+'.csv',
-                                   header=True)
         self.monthly_emis_h2s = None
 
     ## emissions calc methods overrides parent methods
@@ -2184,6 +2180,11 @@ class MonthlyH2Plant(AnnualH2Plant):
         alltox.loc['equipment','total'] = alltox.loc['equipment', 'fuel_ng']
         alltox.loc['month','total']     = alltox.loc['month', 'fuel_ng']
         alltox = alltox.reindex(cf.h2plant2_toxics_reindexer)
+        alltox.to_csv('./output/h2plant2_toxics_'
+                     + str(self.year) + '_'
+                     + str(self.month).zfill(2) + '.csv',
+                     header=True)
+        
         return alltox['total']
     
     def get_series_for_toxics(self, fuel_type):

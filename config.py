@@ -22,12 +22,14 @@ MAX_CEMS_TO_FILL = 18                           # maximum consecutive missing CE
 
 GHG = False                                     # calculate GHG?
 
-calculate_toxics = False                        # calculate toxics?
+# calculate toxics?
+calculate_toxics = False                    
 calculate_FG_toxics = False
-calculate_NG_toxics = False # delete this ? now h2_plant_2 has its own flag
+calculate_NG_toxics = False # delete this? now h2_plant_2 has its own flag
 calculate_calciner_toxics = False
 calculate_h2plant2_toxics = False
-#out_dir_child = '2019_toxics/'
+if calculate_toxics:
+    out_dir_child = '2019_toxics/'
 
 calculate_PM_fractions = False                  # calculate separate PM fractions?
 
@@ -328,7 +330,8 @@ h2s_cems_map = {
                        'ref_heater_2',
                        'dhds_heater_3',
                        'hcr_1',
-                       'hcr_2'
+                       'hcr_2',
+                       'h2_plant_2'
                       ]
                }
 
