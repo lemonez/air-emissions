@@ -808,21 +808,19 @@ class AnnualEquipment(object):
                                  * 1000
                                  * self.HHV_PSA
                                  / 1000000
-                                 * self.f_factor_PSA
-                                 / 1000)
+                                 * self.f_factor_PSA)
             stack['NG_flow']  = ((stack['46FI187.PV'] + stack['46FS38.PV'])
                                  * 1000
                                  * self.HHV_NG
                                  / 1000000
-                                 * self.f_factor_NG
-                                 / 1000)
+                                 * self.f_factor_NG)
             stack['PSA_mscf'] = stack['46FC36.PV']
             stack['NG_mscf'] = stack['46FI187.PV'] + stack['46FS38.PV']
             both_df = pd.concat([both_df, stack], axis=1)
             
-            both_df['dscfh_PSA'] = (both_df['PSA_flow'] * 20.9 / (20.9 - both_df['o2_%']))
-            both_df['dscfh_NG']  = (both_df['NG_flow']  * 20.9 / (20.9 - both_df['o2_%']))
-            both_df['dscfh']  = both_df['dscfh_PSA'] + both_df['dscfh_NG']
+            both_df['PSA_dscfh'] = (both_df['PSA_flow'] * 20.9 / (20.9 - both_df['o2_%']))
+            both_df['NG_dscfh']  = (both_df['NG_flow']  * 20.9 / (20.9 - both_df['o2_%']))
+            both_df['dscfh']  = both_df['PSA_dscfh'] + both_df['NG_dscfh']
         else:
             both_df['dscfh'] = (both_df['fuel_rfg']
                                 * 1000 
@@ -890,11 +888,14 @@ class AnnualEquipment(object):
         df2 = pd.concat([df1, monthly_coke], axis=1)
         
         if self.unit_key == 'calciner_1':
-# TODO: these should not be hardcoded...they change yearly w/ EFs
-            if self.year >= 2019 and self.month >= 9:
-                stack_flow = 117156 # dscf / ton coke    
-            else:
-                stack_flow = 98055 # dscf / ton coke
+# TODO: change to dynamic, not hardcoded...they change yearly w/ EFs
+            if self.year < 2019:
+                    stack_flow = 98055 # dscf / ton coke
+            elif self.year >= 2019
+                if self.month < 9: 
+                    stack_flow = 98055 # dscf / ton coke
+                if self.month >= 9:
+                    stack_flow = 117156 # dscf / ton coke    
             df2['WESP_flow'] = df2['coke_tons'] * stack_flow
         
         if self.unit_key == 'calciner_2':
@@ -1025,7 +1026,7 @@ class AnnualEquipment(object):
             mult_HHV = self.get_HHV_multiplier_for_toxics()
             tox.loc[tox['units']=='lb/mmscf', 'lbs'] = tox['ef'] * mult_fuel
             tox.loc[tox['units']=='lb/mmbtu', 'lbs'] = tox['ef'] * mult_fuel * mult_HHV
-            tox['lbs'] = tox['lbs'] / 1000
+            tox['lbs'] = tox['lbs'] / 1000000 # scf --> mmscf conversion
         tox_ordered = tox['lbs'].reindex(self.get_reindexer_for_toxics())
         tox_ser = pd.concat([base_ser, tox_ordered])
         return tox_ser
@@ -2042,14 +2043,14 @@ class AnnualH2Plant(AnnualEquipment):
         
         self.fpath_h2stack = self.annual_equip.fpath_h2stack
         self.fpath_PSAstack= self.annual_equip.fpath_PSAstack
-
+        
         self.h2stack_annual = self.parse_annual_h2stack()
                               # df: hourly stack data for H2 plant
         self.PSAstack_annual = self.parse_annual_PSAstack()
                               # df: hourly PSA offgas data for H2 plant
-    
+## TODO...delete? this is no longer used for H2plant...is it used elsewhere?
     def parse_annual_h2stack(self):
-        """Read annual stack-flow data for H2 plant, return pd.DataFrame."""
+        """Read annual stack-flow data for H2 plant, return pd.DataFrame in dscfh."""
         stack = pd.read_excel(self.fpath_h2stack, skiprows=2)
         stack.set_index('1 h', drop=True, inplace=True)
         stack.index = pd.to_datetime(stack.index)
@@ -2059,9 +2060,9 @@ class AnnualH2Plant(AnnualEquipment):
         stack = stack * 1000 # convert Mscfh --> dscfh
         stack = stack.clip(lower=0)
         return stack
-
+    
     def parse_annual_PSAstack(self):
-        """Read annual PSA offgas data for H2 plant, return pd.DataFrame in dscfh."""
+        """Read annual PSA offgas data for H2 plant, return pd.DataFrame in mscfh."""
         gas = pd.read_excel(self.fpath_PSAstack, skiprows=2, header=[0,1])
         gas.columns = gas.columns.droplevel(1)
         gas.set_index('1 h', drop=True, inplace=True)
@@ -2070,9 +2071,8 @@ class AnnualH2Plant(AnnualEquipment):
         gas['46FC36.PV'] = pd.to_numeric(gas.loc[:,'46FC36.PV'], errors='coerce')
         gas['46FI187.PV'] = pd.to_numeric(gas.loc[:,'46FI187.PV'], errors='coerce')
         gas['46FS38.PV'] = pd.to_numeric(gas.loc[:,'46FS38.PV'], errors='coerce')
-        gas = gas * 1000 # convert Mscfh --> dscfh
         gas = gas.clip(lower=0)
-        return gas       
+        return gas
 
 class MonthlyH2Plant(AnnualH2Plant):
     """Calculate monthly H2 plant emissions."""

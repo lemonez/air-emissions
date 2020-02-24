@@ -23,11 +23,11 @@ MAX_CEMS_TO_FILL = 18                           # maximum consecutive missing CE
 GHG = False                                     # calculate GHG?
 
 # calculate toxics?
-calculate_toxics = False                    
+calculate_toxics = False
 calculate_FG_toxics = False
 calculate_NG_toxics = False # delete this? now h2_plant_2 has its own flag
 calculate_calciner_toxics = False
-calculate_h2plant2_toxics = False
+calculate_h2plant2_toxics = True
 if calculate_toxics:
     out_dir_child = '2019_toxics/'
 
