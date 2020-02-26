@@ -2125,7 +2125,7 @@ class MonthlyH2Plant(AnnualH2Plant):
                                             self.ts_interval)
         
         self.monthly_emis     = self.calculate_monthly_emissions()
-      #  self.monthly_toxics   = self.calculate_monthly_toxics()
+        self.monthly_toxics   = self.calculate_monthly_toxics()
         self.monthly_emis_h2s = None
 
     ## emissions calc methods overrides parent methods
