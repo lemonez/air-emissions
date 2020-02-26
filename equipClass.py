@@ -256,16 +256,22 @@ class AnnualEquipment(object):
         """Parse EFs for toxics; return pd.DataFrame."""
         toxics = pd.read_excel(self.fpath_toxicsEFs_NG,
                                header=4,
-                               usecols=[0,10,11])
-        toxics.rename(columns={'Chemical'   : 'pollutant',
-                               'EF.1'       : 'ef',
-                               'EF Units.1' : 'units'},
+                               usecols=[0,2,3])
+        toxics.rename(columns={'Chemical' : 'pollutant',
+                               'EF'       : 'ef',
+                               'EF Units' : 'units'},
                       inplace=True)
-        toxics = toxics[toxics['ef'].notna()]
+        toxics['units'] = toxics['units'].str.strip().str.lower()
+        #toxics = toxics[toxics['ef'].notna()]
         return toxics
     
     def _parse_annual_FG_toxics_EFs(self):
         """Parse EFs for toxics; return pd.DataFrame."""
+        """
+        Values are from Section 4-13 of:
+        "Emissions Estimation Protocol for Petroleum Refineries" April 2015
+        <https://www3.epa.gov/ttn/chief/efpac/protocol/Protocol%20Report%202015.pdf>
+        """
         toxics = pd.read_excel(self.fpath_toxicsEFs_FG,
                                header=3, skipfooter=5,
                                usecols=[0,2,3])
@@ -278,6 +284,7 @@ class AnnualEquipment(object):
                                'ICR - EF'     : 'ef',
                                'EF Units'     : 'units'},
                       inplace=True)
+        toxics['units'] = toxics['units'].str.strip().str.lower()
         return toxics
     
     def _parse_annual_flare_EFs(self):
@@ -891,7 +898,7 @@ class AnnualEquipment(object):
 # TODO: change to dynamic, not hardcoded...they change yearly w/ EFs
             if self.year < 2019:
                     stack_flow = 98055 # dscf / ton coke
-            elif self.year >= 2019
+            elif self.year >= 2019:
                 if self.month < 9: 
                     stack_flow = 98055 # dscf / ton coke
                 if self.month >= 9:
@@ -2093,8 +2100,7 @@ class MonthlyH2Plant(AnnualH2Plant):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs_NG   = self.annual_equip.toxicsEFs_NG
-        self.toxicsEFs_PSA  = self.annual_equip.toxicsEFs_PSA
+        self.toxicsEFs      = self.annual_equip.toxicsEFs_NG
         self.flareEFs       = self.annual_equip.flareEFs
         
         self.h2stack_annual = self.annual_eu.h2stack_annual
@@ -2119,7 +2125,7 @@ class MonthlyH2Plant(AnnualH2Plant):
                                             self.ts_interval)
         
         self.monthly_emis     = self.calculate_monthly_emissions()
-        self.monthly_toxics   = self.calculate_monthly_toxics()
+      #  self.monthly_toxics   = self.calculate_monthly_toxics()
         self.monthly_emis_h2s = None
 
     ## emissions calc methods overrides parent methods
@@ -2179,12 +2185,14 @@ class MonthlyH2Plant(AnnualH2Plant):
         alltox['total'] = alltox.sum(axis=1)
         alltox.loc['equipment','total'] = alltox.loc['equipment', 'fuel_ng']
         alltox.loc['month','total']     = alltox.loc['month', 'fuel_ng']
-        alltox = alltox.reindex(cf.h2plant2_toxics_reindexer)
+        reindexer = list(alltox.index)
+        reindexer.insert(reindexer.index('fuel_ng')+1, reindexer.pop())
+        cf.h2plant2_toxics_reindexer = reindexer
+        alltox = alltox.reindex(reindexer)
         alltox.to_csv('./output/h2plant2_toxics_'
                      + str(self.year) + '_'
                      + str(self.month).zfill(2) + '.csv',
                      header=True)
-        
         return alltox['total']
     
     def get_series_for_toxics(self, fuel_type):
@@ -2202,16 +2210,10 @@ class MonthlyH2Plant(AnnualH2Plant):
             return self.HHV_NG
 
     def get_EFs_for_toxics(self, fuel_type):
-        if fuel_type == 'fuel_rfg':
-            return self.toxicsEFs_PSA
-        elif fuel_type == 'fuel_ng':
-            return self.toxicsEFs_NG
+        return self.toxicsEFs
         
     def get_reindexer_for_toxics(self, fuel_type):
-        if fuel_type == 'fuel_rfg':
-            return cf.PSA_toxics_with_EFs
-        elif fuel_type == 'fuel_ng':
-            return cf.NG_toxics_with_EFs
+        return cf.NG_toxics_with_EFs
 
 ##============================================================================##
 

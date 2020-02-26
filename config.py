@@ -15,7 +15,7 @@ data_dir      = './data_'+str(data_year)+'/'    # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = data_year+'_criteria/'
+out_dir_child = str(data_year)+'_criteria/'
 
 round_decimals = 4
 MAX_CEMS_TO_FILL = 18                           # maximum consecutive missing CEMS values to fill
@@ -23,13 +23,13 @@ MAX_CEMS_TO_FILL = 18                           # maximum consecutive missing CE
 GHG = False                                     # calculate GHG?
 
 # calculate toxics?
-calculate_toxics = False
+calculate_toxics = True
 calculate_FG_toxics = False
 calculate_NG_toxics = False # delete this? now h2_plant_2 has its own flag
 calculate_calciner_toxics = False
-calculate_h2plant2_toxics = False
+calculate_h2plant2_toxics = True
 if calculate_toxics:
-    out_dir_child = data_year+'_toxics/'
+    out_dir_child = str(data_year)+'_toxics/'
 
 calculate_PM_fractions = False                  # calculate separate PM fractions?
 
@@ -396,6 +396,8 @@ NG_toxics_with_EFs = [
     # organics
     'Acenaphthene',
     'Acenaphthylene',
+    'Acetaldehyde',
+    'Acrolein',
     'Anthracene',
     'Benzene',
     'Benzo(a)anthracene',
@@ -403,29 +405,48 @@ NG_toxics_with_EFs = [
     'Benzo(b)fluoranthene',
     'Benzo(g,h,i)perylene',
     'Benzo(k)fluoranthene',
-    'Chromium (hexavalent)',
+    'Butane',
     'Chrysene',
     'Dibenz(a,h)anthracene',
+    'Dichlorobenzene',
+    '7,12-Dimethylbenz(a) anthracene',
+    'Ethane',
+    'Ethylbenzene',
     'Fluoranthene',
     'Fluorene',
     'Formaldehyde',
+    'Hexane',
     'Hydrogen sulfide',
     'Indeno(1,2,3-cd)pyrene',
+    '3-Methylchloroanthrene',
+    '2-Methylnaphthalene',
     'Naphthalene',
+    'Pentane',
     'Phenanthrene',
+    'Phenol',
+    'Propane',
     'Propylene',
+    'Pyrene',
     'Toluene',
+    'Xylenes (mixed isomers)',
     # metals
+    'Antimony',
     'Arsenic',
     'Barium',
     'Beryllium',
     'Cadmium',
-    'Chromium',
+    'Chromium (hexavalent)',
+    'Chromium (total)',
+    'Cobalt',
     'Copper',
+    'Lead',
     'Manganese',
     'Mercury',
+    'Molybdenum',
     'Nickel',
+    'Phosphorus',
     'Selenium',
+    'Vanadium',
     'Zinc'
     ]
 
@@ -477,17 +498,6 @@ PSA_toxics_with_EFs = [
     ]
 
 h2plant2_toxics_reindexer = [
-    'equipment', 'month', 'fuel_rfg', 'fuel_ng',
-    'Acenaphthene', 'Acenaphthylene', 'Acetaldehyde', 'Anthracene', 'Benzene',
-    'Benzo(a)anthracene', 'Benzo(a)pyrene', 'Benzo(b)fluoranthene',
-    'Benzo(g,h,i)perylene', 'Benzo(k)fluoranthene',
-    'Chromium (hexavalent)', 'Chrysene', 'Dibenz(a,h)anthracene', 'Ethylbenzene',
-    'Fluoranthene', 'Fluorene', 'Formaldehyde', 'Hydrogen sulfide',
-    'Indeno(1,2,3-cd)pyrene', 'Naphthalene', 'Phenanthrene', 'Phenol',
-    'Propylene', 'Pyrene', 'Toluene', 'Xylenes (mixed isomers)',
-    'Antimony', 'Arsenic', 'Barium', 'Beryllium', 'Cadmium',
-    'Chromium', 'Copper', 'Lead', 'Manganese', 'Mercury', 'Nickel',
-    'Phosphorus', 'Selenium', 'Silver', 'Thallium', 'Zinc'
     ]
 
 calciner_toxics_with_EFs = [
