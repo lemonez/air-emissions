@@ -2,8 +2,7 @@
 
 *.pdf
 *.pyc
-*.ipynb
-.ipynb_checkpoints
+*.ipynb*
 Output*/
 Output*
 Data/Annual/NotParsed/*
