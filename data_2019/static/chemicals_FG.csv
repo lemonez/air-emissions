@@ -1,0 +1,35 @@
+compound,mw,atoms_C,atoms_H,atoms_O,atoms_N
+Hydrogen,2.016,0,2,0,0
+Carbon dioxide,44.01,1,0,1,0
+Hydrogen sulfide,34.08,0,2,0,0
+Oxygen,32,0,0,1,0
+Nitrogen,28.013,0,0,0,1
+Carbon monoxide,28.01,1,0,1,0
+Methane,16.043,1,4,0,0
+Ethane,30.07,2,6,0,0
+Ethylene,28.05,2,4,0,0
+Propane,44.097,3,8,0,0
+Cyclopropane,56.107,4,8,0,0
+Propylene,42.08,3,6,0,0
+Acetylene,26.04,2,2,0,0
+Isobutane,58.123,4,10,0,0
+Propadiene,40.06,3,4,0,0
+n-Butane,58.123,4,10,0,0
+Cyclobutane,56.107,4,8,0,0
+t-2-Butene,56.11,4,8,0,0
+1-Butene,56.11,4,8,0,0
+Isobutene,56.11,4,8,0,0
+c-2-Butene,56.11,4,8,0,0
+Neopentane,72.15,5,12,0,0
+Cyclopentane,70.13,5,10,0,0
+Isopentane,72.15,5,12,0,0
+Methylacetylene,40.06,3,4,0,0
+n-Pentane,72.15,5,12,0,0
+"1,3-Butadiene",54.09,4,6,0,0
+3-Methyl-1-Butene,70.14,5,10,0,0
+t-2-Pentene,70.13,5,10,0,0
+2-Methyl-2-Butene,70.13,5,10,0,0
+1-Pentene,70.13,5,10,0,0
+2-Methyl-1-Butene,70.13,5,10,0,0
+c-2-Pentene,70.13,5,10,0,0
+Hexanes Plus,86.177,6,14,0,0
