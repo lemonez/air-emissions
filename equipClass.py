@@ -635,7 +635,6 @@ class AnnualEquipment(object):
 #++EMISSIONS-CALCULATION METHODS CALLED/SHARED BY MONTHLY CHILD CLASSES++++++++#
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-# TODO: refactor this method; it is a hot mess
     def calculate_monthly_equip_emissions(self):
         """Return pd.Series of equipment unit emissions for specified month."""
         monthly = self.aggregate_hourly_to_monthly()
@@ -768,7 +767,6 @@ class AnnualEquipment(object):
             return self.convert_from_ppm(self.merge_fuel_and_CEMS()).sum()
         return self.merge_fuel_and_CEMS().sum()
     
-#TODO: refactor into 'convert_from_ppm' and 'convert_from_mscfh' methods   
     def convert_from_ppm(self, both_df):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
         if self.unit_key == 'h2_plant_2':
@@ -829,15 +827,6 @@ class AnnualEquipment(object):
         return pd.concat([self.get_monthly_fuel(),
                           self.get_monthly_CEMS()],
                           axis=1)
-    
-# TODO : delete this function; H2stack was a conservative estimate and now we are
-#        calculating stack flow based on PSAstack  
-    def get_monthly_h2stack(self):
-        """Return pd.DataFrame of emis unit stack flow for specified month."""
-        month_stack = (self.h2stack_annual.loc[
-                            self.ts_interval[0]:
-                            self.ts_interval[1]])
-        return month_stack
     
     def get_monthly_PSAstack(self):
         """Return pd.DataFrame of emis unit stack flow for specified month."""
@@ -981,7 +970,7 @@ class AnnualEquipment(object):
         return fuel_df
 
 #### BEGIN: methods for calculating toxics
-## TODO: refactor these first three functions; could be less tangled
+    
     def calculate_monthly_toxics(self):
         """Calculate series of monthly toxics for given emissions unit."""
         fuel = self.get_fuel_type_for_toxics()
@@ -1359,9 +1348,9 @@ class MonthlyCoker(AnnualCoker):
                                 monthly.loc[pol] = (EF_multiplier
                                                 * self.equip_EF[self.unit_key][pol]
                                                 * self.get_conversion_multiplier(pol))
-    # TODO: refactor this hacky temp workaround...
-            # add in VOC from nat gas fuel flow
-            # use emission factors from 'h2_plant_2'
+# TODO: refactor this hacky temp workaround...
+                # add in VOC from nat gas fuel flow
+                # use emission factors from 'h2_plant_2'
                 efs = self.EFs
                 ng_voc_ef    = efs[(efs['unit_id'] == '46') &
                                    (efs['pollutant'] == 'voc')
@@ -1411,10 +1400,9 @@ class MonthlyCoker(AnnualCoker):
                                         * ppm_conv_facts[pol.split('_')[0]]
                                         * both_df['dscfh'])
             return both_df
-
-#TODO: move these to annual level
-    # - will need to deal with the fact that we don't have yearly data for both datasets
-        
+    
+#TODO: move these to annual level, but will need to deal with
+#      the issue of not having yearly data for both datasets
     def merge_fuel_and_CEMS_newcoker(self):
         """Merge fuel and CEMS data, return pd.DataFrame."""
         monthly_CEMS = self.get_monthly_CEMS_newcoker()
@@ -2011,22 +1999,8 @@ class AnnualH2Plant(AnnualEquipment):
         self.fpath_h2stack = self.annual_equip.fpath_h2stack
         self.fpath_PSAstack= self.annual_equip.fpath_PSAstack
         
-        self.h2stack_annual = self.parse_annual_h2stack()
-                              # df: hourly stack data for H2 plant
         self.PSAstack_annual = self.parse_annual_PSAstack()
                               # df: hourly PSA offgas data for H2 plant
-## TODO...delete? this is no longer used for H2plant...is it used elsewhere?
-    def parse_annual_h2stack(self):
-        """Read annual stack-flow data for H2 plant, return pd.DataFrame in dscfh."""
-        stack = pd.read_excel(self.fpath_h2stack, skiprows=2)
-        stack.set_index('1 h', drop=True, inplace=True)
-        stack.index = pd.to_datetime(stack.index)
-        stack.index.name = 'tstamp'
-        tag_name = stack.columns[0]
-        stack[tag_name] = pd.to_numeric(stack.loc[:, tag_name], errors='coerce')
-        stack = stack * 1000 # convert Mscfh --> dscfh
-        stack = stack.clip(lower=0)
-        return stack
     
     def parse_annual_PSAstack(self):
         """Read annual PSA offgas data for H2 plant, return pd.DataFrame in mscfh."""
@@ -2063,7 +2037,6 @@ class MonthlyH2Plant(AnnualH2Plant):
         self.toxicsEFs      = self.annual_equip.toxicsEFs
         self.flareEFs       = self.annual_equip.flareEFs
         
-        self.h2stack_annual = self.annual_eu.h2stack_annual
         self.PSAstack_annual= self.annual_eu.PSAstack_annual
         
         # fuel-sample lab results (pd.DataFrame)
