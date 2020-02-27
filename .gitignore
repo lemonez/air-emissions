@@ -8,8 +8,8 @@
 *notes.txt
 *pycache*
 *.ipynb*
-Output*/
-Output*
+output*/
+output*
 Data/Annual/NotParsed/*
 junk.py
 deepreloader.py
