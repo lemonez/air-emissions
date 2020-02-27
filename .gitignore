@@ -2,7 +2,8 @@
 
 *.pdf
 *.pyc
-*.ipynb*
+*.ipynb
+.ipynb_checkpoints
 Output*/
 Output*
 Data/Annual/NotParsed/*
@@ -14,3 +15,7 @@ junk.py
 *.csh
 deepreloader.py
 !data_2019/static/equipmap.csv
+refactor.py
+Iter2018/
+equiptests.py
+backlog.txt
