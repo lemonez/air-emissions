@@ -19,15 +19,31 @@ class AnnualParser(object):
     write_csvs = True
     return_dfs = True
     
-    def __init__(self, annual_equip):
+    def __init__(self, annual_equip, calculation):
         """Constructor for handling inputs, calculations, and outputs."""
         """
         Takes AnnualEquipment() instance as argument.
         """
         self.annual_equip       = annual_equip
-        
-        # out-directory paths
-        self.out_dir_child      = cf.out_dir_child
+        self.calculation        = calculation
+
+        self.is_criteria        = False
+        self.is_FG_toxics       = False
+        self.is_calciner_toxics = False
+        self.is_h2plant2_toxics = False
+
+        if calculation == 'criteria':
+            self.is_criteria = True
+            self.toxics_text = ' criteria '
+        if calculation == 'FG_toxics':
+            self.is_FG_toxics = True
+            self.toxics_text = ' fuel gas toxics '
+        if calculation == 'calciner_toxics':
+            self.toxics_text = ' calciner toxics '
+            self.is_calciner_toxics = True
+        if calculation == 'h2plant2_toxics':
+            self.is_h2plant2_toxics = True
+            self.toxics_text = ' #2 H2 plant toxics '
         
         # parsed from config file
         self.year_to_calc       = cf.data_year
@@ -36,48 +52,28 @@ class AnnualParser(object):
         self.equip_to_calc      = cf.equip_to_calculate
         self.pollutants_to_calc = cf.pollutants_to_calculate
         self.pollutants_all     = cf.pollutants_all
-        self.is_toxics          = cf.calculate_toxics
-        self.is_FG_toxics       = cf.calculate_FG_toxics
-        self.is_NG_toxics       = cf.calculate_NG_toxics
-        self.is_calciner_toxics = cf.calculate_calciner_toxics
-        self.is_h2plant2_toxics = cf.calculate_h2plant2_toxics
         self.write_month_names  = cf.write_month_names
         self.month_map          = cf.month_map
         self.verbose_logging    = cf.verbose_logging
-    #    h2s_equips_to_calc     = cf.h2s_equips_to_calc
-    #    EFs_to_check           = cf.EFs_to_check
+        
         
         self.all_equip_dict     = {}
         self.all_equip_dict_h2s = {}
-
-        self.toxics_text = ' '
-        if self.is_toxics:
-            if self.is_FG_toxics:
-                self.toxics_text = ' fuel gas toxics '
-            elif self.is_NG_toxics:
-                self.toxics_text = ' natural gas toxics '
-            elif self.is_calciner_toxics:
-                self.toxics_text = ' calciner toxics '
-            elif self.is_h2plant2_toxics:
-                self.toxics_text = ' h2_plant_2 toxics '
-
+        
         self.ordered_equip = self.annual_equip.ordered_equip
     
     def read_calculate_write_annual_emissions(self):
         """Parse data for specified equipment, calculate emissions, write CSVs."""
-        if not self.is_toxics:
-            format_str = ''
-        elif self.is_toxics:
-            if self.is_FG_toxics:
-                format_str = '_TOXICS_FG'
-            elif self.is_NG_toxics:
-                format_str = '_TOXICS_NG'
-            elif self.is_calciner_toxics:
-                format_str = '_TOXICS_calciners'
-            elif self.is_h2plant2_toxics:
-                format_str = '_TOXICS_h2plant2'
+        if self.is_criteria:
+            format_str = '_CRITERIA'
+        elif self.is_FG_toxics:
+            format_str = '_TOXICS_FG'
+        elif self.is_calciner_toxics:
+            format_str = '_TOXICS_calciners'
+        elif self.is_h2plant2_toxics:
+            format_str = '_TOXICS_h2plant2'
         for df in self.groupby_annual():
-            outname = (self.out_dir_child
+            outname = (cf.out_dir_child
                        +str(self.year_to_calc)+'_'
                        +df.name+'{}.csv')
             df.round(cf.round_decimals).to_csv(outname.format(format_str))
@@ -85,7 +81,7 @@ class AnnualParser(object):
     def groupby_annual(self):
         """Aggregate data in multiple schemes, return pd.DataFrame list."""
         annual_df = self.format_annual_columns()
-        if not self.is_toxics:
+        if self.is_criteria:
             annual_df = self.subtract_h2so4_if_output(annual_df)
         MI_col = self.return_MI_colnames(annual_df)
         print('Slicing and dicing emissions data for output.')
@@ -137,7 +133,7 @@ class AnnualParser(object):
         q_gb.columns = MI_col
         q_gb.name = 'by_Quarter'
         
-        if not self.is_toxics:
+        if self.is_criteria:
             self.groupby_annual_h2s()
         
         return [e_gb, m_gb, q_gb, eXm_gb, eXq_gb, qXe_gb]
@@ -196,7 +192,7 @@ class AnnualParser(object):
 #TODO: refactor to create MultiIndex from existing columns instead of
 #      based on config file; less error-prone
         # if not calculating toxics
-        if not self.is_toxics:
+        if self.is_criteria:
             drop_pollutants = [pol for pol in self.pollutants_all
                                    if pol not in self.pollutants_to_calc
                                    and pol in annual_df.columns]
@@ -231,8 +227,7 @@ class AnnualParser(object):
             elif 'CO2' in cf.pollutants_to_calculate:
                 arr_col = [['Combined Fuel Gas', 'CO2'],
                            (['mscf'] * 1) + (['tons'] * 1)]
-
-        elif self.is_toxics:
+        else: # if toxics
             if self.is_FG_toxics:
                 arr_col_lev0 = ['Refinery Fuel Gas']
                 arr_col_lev1 = ['mscf']
@@ -260,7 +255,7 @@ class AnnualParser(object):
         annual_df = self.format_annual_labels()
         print('Formatting emissions data columns.')
         col_order = ['WED Pt', 'Equipment', 'Month']
-        if not self.is_toxics:
+        if self.is_criteria:
             if 'CO2' in cf.pollutants_to_calculate:
                 col_order += ['Combined Fuel Gas']
                 col_order += ['CO2']
@@ -268,7 +263,6 @@ class AnnualParser(object):
                 col_order += ['Refinery Fuel Gas', 'Natural Gas']
                 col_order += ['NOx', 'CO', 'SO2', 'VOC',
                               'PM', 'PM25', 'PM10', 'H2SO4']
-
             # for H2S
             if len(self.annual_h2s) > 1:
                 h2s_df = self.h2s_df_labeled
@@ -278,21 +272,18 @@ class AnnualParser(object):
                 h2s_df_formatted = h2s_df.rename(
                     columns=cf.output_colnames_map)[col_order_h2s]
                 h2s_df_formatted.name = 'H2S_test'
-                outfile_H2S = (self.out_dir_child+str(self.year_to_calc)+
+                outfile_H2S = (cf.out_dir_child+str(self.year_to_calc)+
                               '_'+h2s_df_formatted.name+'{}.csv'.format(''))
                 self.h2s_df_formatted = h2s_df_formatted
-        
-        elif self.is_toxics:
-            if self.is_FG_toxics:
-                col_order += ['Refinery Fuel Gas']
-                col_order += cf.toxics_with_EFs
-            elif self.is_calciner_toxics:
-                col_order += ['Calcined Coke']
-                col_order += cf.calciner_toxics_with_EFs
-            elif self.is_h2plant2_toxics:
-                col_order += ['Refinery Fuel Gas', 'Natural Gas']
-                col_order += cf.h2plant2_toxics_reindexer[4:]
-
+        elif self.is_FG_toxics:
+            col_order += ['Refinery Fuel Gas']
+            col_order += cf.toxics_with_EFs
+        elif self.is_calciner_toxics:
+            col_order += ['Calcined Coke']
+            col_order += cf.calciner_toxics_with_EFs
+        elif self.is_h2plant2_toxics:
+            col_order += ['Refinery Fuel Gas', 'Natural Gas']
+            col_order += cf.h2plant2_toxics_reindexer[4:]
         return annual_df.rename(columns=cf.output_colnames_map)[col_order]
     
     def format_annual_labels(self):
@@ -314,7 +305,6 @@ class AnnualParser(object):
                                        'WED Pt': replace_WEDpt,
                                        'equipment': replace_equip
                                       })
-        
         # for H2S
         if len(self.annual_h2s) > 1:
             h2s_df = self.annual_h2s
@@ -332,7 +322,8 @@ class AnnualParser(object):
     
     def calculate_aggregate_all_to_annual(self):
         """Return pd.DataFrame of annual emissions from listed equipment."""
-        print('Calculating emissions for equipment and months specified...')
+        print('Calculating{}emissions for equipment and months specified...'.format(
+            self.toxics_text))
         if 'CO2' not in cf.pollutants_to_calculate:
             if 'heaterboiler' in cf.equip_types_to_calculate:
                 annual_hb       = equipClass.AnnualHB(self.annual_equip)
@@ -350,19 +341,16 @@ class AnnualParser(object):
                                 e for e in self.ordered_equip
                                 if e in cf.equip_to_calculate
                                 ]
-            if self.is_toxics:
-                if self.is_FG_toxics:
-                    to_remove = ['h2_flare', 'h2_plant_2', 'calciner_1', 'calciner_2']
-                    ordered_equip_to_calculate = [
-                                e for e in ordered_equip_to_calculate
-                                if e not in to_remove
-                                ]
-                elif self.is_NG_toxics:
-                    ordered_equip_to_calculate = ['h2_plant_2']
-                elif self.is_calciner_toxics:
-                    ordered_equip_to_calculate = ['calciner_1', 'calciner_2']
-                elif self.is_h2plant2_toxics:
-                    ordered_equip_to_calculate = ['h2_plant_2']
+            if self.is_FG_toxics:
+                to_remove = ['h2_flare', 'h2_plant_2', 'calciner_1', 'calciner_2']
+                ordered_equip_to_calculate = [
+                            e for e in ordered_equip_to_calculate
+                            if e not in to_remove
+                            ]
+            elif self.is_calciner_toxics:
+                ordered_equip_to_calculate = ['calciner_1', 'calciner_2']
+            elif self.is_h2plant2_toxics:
+                ordered_equip_to_calculate = ['h2_plant_2']
             for unit_key in ordered_equip_to_calculate:
                 each_equip_ser       = []
                 each_equip_tuple_h2s = []
@@ -387,16 +375,16 @@ class AnnualParser(object):
                     elif eu_type == 'h2plant':
                         eu = equipClass.MonthlyH2Plant(unit_key, month, annual_h2plant)
                     
-                    if not self.is_toxics:
+                    if self.is_criteria:
                         emis = eu.monthly_emis
                         if eu.monthly_emis_h2s is None:
                             h2s_tuple = None
                         else:
                             h2s_tuple = eu.monthly_emis_h2s
-                    elif self.is_toxics:
+                    else:
                         emis = eu.monthly_toxics
                     each_equip_ser.append(emis)
-                    if not self.is_toxics:
+                    if self.is_criteria:
                         each_equip_tuple_h2s.append(h2s_tuple)
 
                 all_months = pd.concat(each_equip_ser, axis=1)

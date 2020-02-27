@@ -30,15 +30,15 @@ def main():
                 mo_start = cf.month_map.get(mos[0])
                 mo_end   = cf.month_map.get(mos[-1])
                 if mo_start != mo_end:
-                    print('    {:<22}: {} to {}'.format(k, mo_start, mo_end))
+                    print('    {:<28}: {} to {}'.format(k, mo_start, mo_end))
                 else:
-                    print('    {:<22}: {}'.format(k, mo_start))
+                    print('    {:<28}: {}'.format(k, mo_start))
             elif k == 'equip_to_calculate':
-                print('    {:<22}: {}'.format(k, args_dict[k][0]))
+                print('    {:<28}: {}'.format(k, args_dict[k][0]))
                 for eq in args_dict[k][1:]:
-                    print('    {:<22}: {}'.format('', eq))
+                    print('    {:<28}: {}'.format('', eq))
             else:
-                print('    {:<22}: {}'.format(k,v))
+                print('    {:<28}: {}'.format(k,v))
         print('\n')
 
     cf.verify_pollutants_to_calc(cf.pollutants_to_calculate)
@@ -62,7 +62,24 @@ def main():
     from parserClass import AnnualParser
     from equipClass import AnnualEquipment
     
-    AnnualParser(AnnualEquipment()).read_calculate_write_annual_emissions()
+    ae = AnnualEquipment()
+    
+    if cf.calculate_criteria:
+        print('\n')
+        AnnualParser(
+            ae, calculation='criteria').read_calculate_write_annual_emissions()
+    if cf.calculate_FG_toxics:
+        print('\n')
+        AnnualParser(
+            ae, calculation='FG_toxics').read_calculate_write_annual_emissions()
+    if cf.calculate_calciner_toxics:
+        print('\n')
+        AnnualParser(
+            ae, calculation='calciner_toxics').read_calculate_write_annual_emissions()
+    if cf.calculate_h2plant2_toxics:
+        print('\n')
+        AnnualParser(
+            ae, calculation='h2plant2_toxics').read_calculate_write_annual_emissions()
     
     # print total time for script runtime
     end_time_seconds = time.time()
@@ -132,22 +149,22 @@ def get_args():
                         dest='months_to_calculate', metavar='Months',
                         default=cf.months_to_calculate,
                         help='Months of data to parse (default: %(default)s).')
-    group2.add_argument('-t', '--toxics',
-                        dest='calculate_toxics', metavar='T/F',
-                        default=cf.calculate_toxics,
-                        help='Whether or not to calculate toxics (default: %(default)s).')
-    group2.add_argument('--FG_toxics',
+    group2.add_argument('--criteria',
+                        dest='calculate_criteria', metavar='T/F',
+                        default=cf.calculate_criteria,
+                        help='Whether or not to calculate criteria pollutants (default: %(default)s).')
+    group2.add_argument('--ftoxics',
                         dest='calculate_FG_toxics', metavar='T/F',
                         default=cf.calculate_FG_toxics,
-                        help='If calculating toxics, whether or not to calculate fuel gas toxics (default: %(default)s).')
-    group2.add_argument('--NG_toxics',
-                        dest='calculate_NG_toxics', metavar='T/F',
-                        default=cf.calculate_NG_toxics,
-                        help='If calculating toxics, whether or not to calculate natural gas toxics (default: %(default)s).')
-    group2.add_argument('--calciner_toxics',
+                        help='Whether or not to calculate fuel gas toxics (default: %(default)s).')
+    group2.add_argument('--ctoxics',
                         dest='calculate_calciner_toxics', metavar='T/F',
                         default=cf.calculate_calciner_toxics,
-                        help='If calculating toxics, whether or not to calculate calciner toxics (default: %(default)s).')
+                        help='Whether or not to calculate calciner toxics (default: %(default)s).')
+    group2.add_argument('--htoxics',
+                        dest='calculate_h2plant2_toxics', metavar='T/F',
+                        default=cf.calculate_h2plant2_toxics,
+                        help='Whether or not to calculate toxics for WED Pt. #46 H2 Plant #2 (default: %(default)s).')
                         
     group3 = parser.add_argument_group('Console Output / QA')
     # maybe change verbosity options; this may be confusing

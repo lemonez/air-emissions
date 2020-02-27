@@ -10,26 +10,24 @@ import pandas as pd
 #### configure data/calculations ####
 first_month_to_calculate = 1
 last_month_to_calculate  = 12
-data_year     = 2019                            # year_to_calculate ## int(time.strftime('%Y'))
+data_year     = 2019                            # year_to_calculate ## 
+                                                    # int(time.strftime('%Y'))
 data_dir      = './data_'+str(data_year)+'/'    # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = str(data_year)+'_criteria/'
+out_dir_child = str(data_year)+'_emissions/'
 
 round_decimals = 10
 MAX_CEMS_TO_FILL = 18                           # maximum consecutive missing CEMS values to fill
 
 GHG = False                                     # calculate GHG?
 
-# calculate toxics?
-calculate_toxics = True
-calculate_FG_toxics = False
-calculate_NG_toxics = False # delete this? now h2_plant_2 has its own flag
-calculate_calciner_toxics = False
-calculate_h2plant2_toxics = True
-if calculate_toxics:
-    out_dir_child = str(data_year)+'_toxics/'
+# what to calculate?
+calculate_criteria = True                       # criteria pollutants (or GHG)
+calculate_FG_toxics = True                     # toxics based on fuel gas usage
+calculate_calciner_toxics = True               # toxics from calciners
+calculate_h2plant2_toxics = True               # toxics from h2_plant_2
 
 calculate_PM_fractions = False                  # calculate separate PM fractions?
 
@@ -148,7 +146,7 @@ equip_to_calculate = [
 
 pollutants_all = [
     # criteria
-    'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4',
+    'CO', 'NOx', 'PM', 'PM25', 'PM10', 'SO2', 'VOC', 'H2SO4',
     # GHG
     'CO2'
     ]

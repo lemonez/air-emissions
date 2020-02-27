@@ -67,8 +67,8 @@ class AnnualEquipment(object):
         
         # formatting list: col order for emissions summaries
         self.col_name_order = ['equipment', 'month', 'fuel_rfg', 'fuel_ng',
-                               'nox', 'co', 'so2', 'voc',
-                               'pm', 'pm25', 'pm10', 'h2so4']
+                               'co', 'nox', 'pm', 'pm25', 'pm10',
+                               'so2', 'voc', 'h2so4']
         
         # equipment mapping containers
         self.equip          = self._parse_equip_map()                # df: all equipment/PItag data
@@ -245,6 +245,7 @@ class AnnualEquipment(object):
                                'EF Units' : 'units'},
                       inplace=True)
         toxics['units'] = toxics['units'].str.strip().str.lower()
+        # calculating H2S from CEMS, so drop from EF list
         toxics= toxics[toxics['pollutant'] != 'Hydrogen sulfide']
         return toxics
     
@@ -994,7 +995,7 @@ class AnnualEquipment(object):
             mult_HHV = self.get_HHV_multiplier_for_toxics()
             tox.loc[tox['units']=='lb/mmscf', 'lbs'] = tox['ef'] * mult_fuel
             tox.loc[tox['units']=='lb/mmbtu', 'lbs'] = tox['ef'] * mult_fuel * mult_HHV
-            tox['lbs'] = tox['lbs'] / 1000000 # scf --> mmscf conversion
+            tox['lbs'] = tox['lbs'] / 1000 # unit conversion b/c fuel in mscf
         tox_ordered = tox['lbs'].reindex(self.get_reindexer_for_toxics())
         tox_ser = pd.concat([base_ser, tox_ordered]).replace(np.nan, 0)
         return tox_ser
