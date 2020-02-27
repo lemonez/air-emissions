@@ -1,0 +1,20 @@
+PI Tag,Python GUID,WED Pt,Unit Name,CEMS,Range,Units,1-day,5-day
+12AI8060A.PV,coker_e,40 E,Coker E Charge Heater,Dry O2,0-300,%,NULL,NULL
+12AI8060B.PV,coker_e,40 E,Coker E Charge Heater,NOX,0-300,ppm,NULL,NULL
+12AI8060C.PV,coker_e,40 E,Coker E Charge Heater,CO,0-300,ppm,NULL,NULL
+12AI8060D.PV,coker_e,40 E,Coker E Charge Heater,Lo SO2,0-300,ppm,NULL,NULL
+12AI8060E.PV,coker_e,40 E,Coker E Charge Heater,CO2,NULL,%,NULL,NULL
+12AI8060G.PV,coker_e,40 E,Coker E Charge Heater,Hi SO2,0-300,ppm,NULL,NULL
+12AI7060A.PV,coker_w,41 W,Coker W Charge Heater,Dry O2,NULL,%,NULL,NULL
+12AI7060B.PV,coker_w,41 W,Coker W Charge Heater,NOX,0-300,ppm,NULL,NULL
+12AI7060C.PV,coker_w,41 W,Coker W Charge Heater,CO,0-300,ppm,NULL,NULL
+12AI7060D.PV,coker_w,41 W,Coker W Charge Heater,Lo SO2,0-300,ppm,NULL,NULL
+12AI7060E.PV,coker_w,41 W,Coker W Charge Heater,CO2,NULL,%,NULL,NULL
+12AI7060G.PV,coker_w,41 W,Coker W Charge Heater,Hi SO2,0-300,ppm,NULL,NULL
+46AI601.PV,h2_plant_2,46,H2 Plant #2,Dry O2,0-25,%,2,1
+46AI60_.PV,h2_plant_2,46,H2 Plant #2,Wet O2,0-25,%,2,1
+46AI604.PV,h2_plant_2,46,H2 Plant #2,SO2,0-50,ppm,5,2.5
+20AI204.PV,calciner_1,70,Calciner Hearths #1&2,O2,0-25,%,2,1
+20AI205.PV,calciner_1,70,Calciner Hearths #1&2,SO2,0-200,ppm,20,10
+20AI2606.PV,calciner_2,71,Calciner Hearth #3,O2,0-25,%,2,1
+20AI2607.PV,calciner_2,71,Calciner Hearth #3,SO2,0-200,ppm,20,10
