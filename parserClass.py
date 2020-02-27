@@ -236,13 +236,7 @@ class AnnualParser(object):
             if self.is_FG_toxics:
                 arr_col_lev0 = ['Refinery Fuel Gas']
                 arr_col_lev1 = ['mscf']
-                for pol in cf.FG_toxics_with_EFs:
-                    arr_col_lev0 += [pol]
-                    arr_col_lev1 += ['lbs']
-            elif self.is_NG_toxics:
-                arr_col_lev0 = ['Natural Gas']
-                arr_col_lev1 = ['mscf']
-                for pol in cf.NG_toxics_with_EFs:
+                for pol in cf.toxics_with_EFs:
                     arr_col_lev0 += [pol]
                     arr_col_lev1 += ['lbs']
             elif self.is_calciner_toxics:
@@ -291,10 +285,7 @@ class AnnualParser(object):
         elif self.is_toxics:
             if self.is_FG_toxics:
                 col_order += ['Refinery Fuel Gas']
-                col_order += cf.FG_toxics_with_EFs
-            elif self.is_NG_toxics:
-                col_order += ['Natural Gas']
-                col_order += cf.NG_toxics_with_EFs
+                col_order += cf.toxics_with_EFs
             elif self.is_calciner_toxics:
                 col_order += ['Calcined Coke']
                 col_order += cf.calciner_toxics_with_EFs

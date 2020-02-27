@@ -52,8 +52,7 @@ class AnnualEquipment(object):
         self.fpath_h2stack  = cf.fpath_h2stack
         self.fpath_PSAstack = cf.fpath_PSAstack
         self.fpath_flareEFs = cf.fpath_flareEFs
-        self.fpath_toxicsEFs_FG        = cf.fpath_toxicsEFs_FG
-        self.fpath_toxicsEFs_NG        = cf.fpath_toxicsEFs_NG
+        self.fpath_toxicsEFs= cf.fpath_toxicsEFs
         self.fpath_toxicsEFs_calciners = cf.fpath_toxicsEFs_calciners
         
         # fuel lab analysis tabs
@@ -128,12 +127,8 @@ class AnnualEquipment(object):
         print('  parsing emission factor data')
         self.flareEFs       = self._parse_annual_flare_EFs()
                              # df: EFs for flare gas
-        self.toxicsEFs_FG   = self._parse_annual_FG_toxics_EFs()
-                            # df: EFs for fuel gas toxics
-        self.toxicsEFs_NG   = self._parse_annual_NG_toxics_EFs()
-                            # df: EFs for natural gas toxics
-        self.toxicsEFs_PSA  = self._parse_annual_PSA_toxics_EFs()
-                            # df: EFs for PSA offgas toxics
+        self.toxicsEFs      = self._parse_annual_toxics_EFs()
+                            # df: EFs for fuel gas / natural gas toxics
         self.toxicsEFs_calciners = self._parse_annual_calciner_toxics_EFs()
                             # df: EFs for calciner toxics
         self.EFs            = self._parse_annual_EFs()
@@ -240,51 +235,17 @@ class AnnualEquipment(object):
                        )
         return caltox[['pollutant', 'ef', 'units']]
     
-    def _parse_annual_PSA_toxics_EFs(self):
-        """Parse EFs for toxics; return pd.DataFrame."""
-        toxics = pd.read_excel(self.fpath_toxicsEFs_NG,
-                               header=4,
-                               usecols=[0,2,3])
-        toxics.rename(columns={'Chemical' : 'pollutant',
-                               'EF'       : 'ef',
-                               'EF Units' : 'units'},
-                      inplace=True)
-        toxics = toxics[toxics['ef'].notna()]
-        return toxics
-    
-    def _parse_annual_NG_toxics_EFs(self):
-        """Parse EFs for toxics; return pd.DataFrame."""
-        toxics = pd.read_excel(self.fpath_toxicsEFs_NG,
-                               header=4,
+    def _parse_annual_toxics_EFs(self):
+        """Parse EFs for fuel gas / natural gas toxics; return pd.DataFrame."""
+        toxics = pd.read_excel(self.fpath_toxicsEFs,
+                               header=3,
                                usecols=[0,2,3])
         toxics.rename(columns={'Chemical' : 'pollutant',
                                'EF'       : 'ef',
                                'EF Units' : 'units'},
                       inplace=True)
         toxics['units'] = toxics['units'].str.strip().str.lower()
-        #toxics = toxics[toxics['ef'].notna()]
-        return toxics
-    
-    def _parse_annual_FG_toxics_EFs(self):
-        """Parse EFs for toxics; return pd.DataFrame."""
-        """
-        Values are from Section 4-13 of:
-        "Emissions Estimation Protocol for Petroleum Refineries" April 2015
-        <https://www3.epa.gov/ttn/chief/efpac/protocol/Protocol%20Report%202015.pdf>
-        """
-        toxics = pd.read_excel(self.fpath_toxicsEFs_FG,
-                               header=3, skipfooter=5,
-                               usecols=[0,2,3])
-        # because the source test EF for Pb for boiler #5 equals
-        # the EF for the rest of the equipment, drop that row and 
-        # treat it the same; could add exception for boiler #5
-        # in the future but not necessary for 2018 emissions
-        toxics = toxics.iloc[:-1]
-        toxics.rename(columns={'Chemical Name': 'pollutant',
-                               'ICR - EF'     : 'ef',
-                               'EF Units'     : 'units'},
-                      inplace=True)
-        toxics['units'] = toxics['units'].str.strip().str.lower()
+        toxics= toxics[toxics['pollutant'] != 'Hydrogen sulfide']
         return toxics
     
     def _parse_annual_flare_EFs(self):
@@ -1019,7 +980,7 @@ class AnnualEquipment(object):
         return fuel_df
 
 #### BEGIN: methods for calculating toxics
-
+## TODO: refactor these first three functions; could be less tangled
     def calculate_monthly_toxics(self):
         """Calculate series of monthly toxics for given emissions unit."""
         fuel = self.get_fuel_type_for_toxics()
@@ -1035,8 +996,19 @@ class AnnualEquipment(object):
             tox.loc[tox['units']=='lb/mmbtu', 'lbs'] = tox['ef'] * mult_fuel * mult_HHV
             tox['lbs'] = tox['lbs'] / 1000000 # scf --> mmscf conversion
         tox_ordered = tox['lbs'].reindex(self.get_reindexer_for_toxics())
-        tox_ser = pd.concat([base_ser, tox_ordered])
+        tox_ser = pd.concat([base_ser, tox_ordered]).replace(np.nan, 0)
         return tox_ser
+    
+    def get_series_for_toxics(self):
+        """return Series with sum of monthly natural gas usage."""
+        fuel_type = self.get_fuel_type_for_toxics()
+        base_ser = pd.Series({'equipment': self.unit_key,
+                              'month'    : self.month})
+        if self.unit_key in ['calciner_1', 'calciner_2']:
+            base_ser.loc[fuel_type] = self.get_monthly_coke()[fuel_type].sum()
+        else: 
+            base_ser.loc[fuel_type] = self.monthly_emis.loc[fuel_type]        
+        return base_ser    
     
     def get_fuel_type_for_toxics(self):
         """Return string indicating fuel type to use for calculating toxics."""
@@ -1047,36 +1019,23 @@ class AnnualEquipment(object):
         else:
             return 'fuel_rfg'
     
-    def get_series_for_toxics(self):
-        """return Series with sum of monthly natural gas usage."""
-        fuel_type = self.get_fuel_type_for_toxics()
-        base_ser = pd.Series({'equipment':self.unit_key,
-                              'month'    :self.month})
-        if self.unit_key in ['calciner_1', 'calciner_2']:
-            base_ser.loc[fuel_type] = self.get_monthly_coke()[fuel_type].sum()
-        else: 
-            base_ser.loc[fuel_type] = self.monthly_emis.loc[fuel_type]        
-        return base_ser    
-    
     def get_HHV_multiplier_for_toxics(self):
         """Return HHV multiplier to convert mscf to mmBtu."""
         if self.unit_key in ['coker_1', 'coker_2', 'coker_e', 'coker_w']:
             return self.HHV_cokerFG
         elif self.unit_key == 'crude_vtg':
             return self.HHV_CVTG
-        elif self.unit_key == 'h2_flare':
-            return self.HHV_flare
+        # elif self.unit_key == 'h2_flare':  ## not currently calculating toxics for flare
+            # return self.HHV_flare
         else:
             return self.HHV_RFG
     
     def get_reindexer_for_toxics(self):
         """Return correct toxics order for WEIRS."""
-        if self.unit_key == 'h2_flare':
-            return cf.NG_toxics_with_EFs
-        elif self.unit_key in ['calciner_1', 'calciner_2']:
+        if self.unit_key in ['calciner_1', 'calciner_2']:
             return cf.calciner_toxics_with_EFs
         else:
-            return cf.FG_toxics_with_EFs
+            return cf.toxics_with_EFs
     
 #### END: methods for calculating toxics
 
@@ -1274,7 +1233,7 @@ class MonthlyHB(AnnualHB):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_FG
+        self.toxicsEFs      = self.annual_equip.toxicsEFs
         self.year           = self.annual_equip.year
         
         # fuel-sample lab results (pd.DataFrame)
@@ -1333,7 +1292,7 @@ class MonthlyCoker(AnnualCoker):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_FG
+        self.toxicsEFs      = self.annual_equip.toxicsEFs
 
         # gas-sample lab results (DataFrames)
         self.NG_monthly     = ff.get_monthly_lab_results(
@@ -1546,7 +1505,7 @@ class MonthlyCokerOLD(AnnualCoker):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
 #         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_FG
+        self.toxicsEFs      = self.annual_equip.toxicsEFs
         
         self.cokerFG_monthly = ff.get_monthly_lab_results(
                                             self.annual_equip.cokerFG_annual,
@@ -2100,7 +2059,7 @@ class MonthlyH2Plant(AnnualH2Plant):
         self.col_name_order = self.annual_equip.col_name_order
         self.equip_ptags    = self.annual_equip.equip_ptags
         self.ptags_pols     = self.annual_equip.ptags_pols
-        self.toxicsEFs      = self.annual_equip.toxicsEFs_NG
+        self.toxicsEFs      = self.annual_equip.toxicsEFs
         self.flareEFs       = self.annual_equip.flareEFs
         
         self.h2stack_annual = self.annual_eu.h2stack_annual
@@ -2125,7 +2084,7 @@ class MonthlyH2Plant(AnnualH2Plant):
                                             self.ts_interval)
         
         self.monthly_emis     = self.calculate_monthly_emissions()
-        self.monthly_toxics   = self.calculate_monthly_toxics()
+    #    self.monthly_toxics   = self.calculate_monthly_toxics()
         self.monthly_emis_h2s = None
 
     ## emissions calc methods overrides parent methods
@@ -2177,7 +2136,7 @@ class MonthlyH2Plant(AnnualH2Plant):
             tox.loc[tox['units']=='lb/mmscf', 'lbs'] = tox['ef'] * mult_fuel
             tox.loc[tox['units']=='lb/mmbtu', 'lbs'] = tox['ef'] * mult_fuel * mult_HHV
             tox['lbs'] = tox['lbs'] / 1000
-            tox_ordered = tox['lbs'].reindex(self.get_reindexer_for_toxics(fuel))
+            tox_ordered = tox['lbs'].reindex(self.get_reindexer_for_toxics())
             tox_ser = pd.concat([base_ser, tox_ordered])
             tox_ser.name = 'from'+fuel[4:]
             toxics[fuel] = tox_ser
@@ -2211,9 +2170,6 @@ class MonthlyH2Plant(AnnualH2Plant):
 
     def get_EFs_for_toxics(self, fuel_type):
         return self.toxicsEFs
-        
-    def get_reindexer_for_toxics(self, fuel_type):
-        return cf.NG_toxics_with_EFs
 
 ##============================================================================##
 

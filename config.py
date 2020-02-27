@@ -17,17 +17,17 @@ log_dir       = out_dir+'logs/'
 log_suffix    = ''
 out_dir_child = str(data_year)+'_criteria/'
 
-round_decimals = 4
+round_decimals = 10
 MAX_CEMS_TO_FILL = 18                           # maximum consecutive missing CEMS values to fill
 
 GHG = False                                     # calculate GHG?
 
 # calculate toxics?
 calculate_toxics = True
-calculate_FG_toxics = False
+calculate_FG_toxics = True
 calculate_NG_toxics = False # delete this? now h2_plant_2 has its own flag
 calculate_calciner_toxics = False
-calculate_h2plant2_toxics = True
+calculate_h2plant2_toxics = False
 if calculate_toxics:
     out_dir_child = str(data_year)+'_toxics/'
 
@@ -52,8 +52,7 @@ if data_year == 2019:
     fname_h2stack  = str(data_year)+'_flow_h2stack_Dec.xlsx'    # annual H2-stack flow data
     fname_PSAstack = str(data_year)+'_flow_PSAoffgas_Dec.xlsx'  # PSA offgas flow data for #2 H2 Plant
     fname_flareEFs = str(data_year)+'_EFs_flare.xlsx'           # EFs for H2 flare
-    fname_toxicsEFs_FG = str(data_year)+'_EFs_toxics_FG.xlsx'   # EFs for toxics
-    fname_toxicsEFs_NG = str(data_year)+'_EFs_toxics_NG.xlsx'   # EFs for natural gas toxics
+    fname_toxicsEFs= str(data_year)+'_EFs_toxics.xlsx'          # EFs for toxics
     fname_toxicsEFs_calciners = str(data_year)+'_EFs_toxics_calciner.xlsx' # EFs for calciners toxics
     
     labtab_NG       = '#2H2FdNatGas 2019'  # NG-sample lab-test data
@@ -104,8 +103,7 @@ fpath_flarefuel = annual_prefix+fname_flarefuel
 fpath_h2stack   = annual_prefix+fname_h2stack
 fpath_PSAstack  = annual_prefix+fname_PSAstack
 fpath_flareEFs  = annual_prefix+fname_flareEFs
-fpath_toxicsEFs_FG = annual_prefix+fname_toxicsEFs_FG
-fpath_toxicsEFs_NG = annual_prefix+fname_toxicsEFs_NG
+fpath_toxicsEFs = annual_prefix+fname_toxicsEFs
 fpath_toxicsEFs_calciners = annual_prefix+fname_toxicsEFs_calciners
 
 ################################################################################
@@ -115,51 +113,60 @@ fpath_toxicsEFs_calciners = annual_prefix+fname_toxicsEFs_calciners
 month_offset = first_month_to_calculate
 
 equip_to_calculate = [
-                      'crude_vtg',
-                      'crude_rfg',
-                      'n_vac',
-                      's_vac',
-                      'ref_heater_1',
-                      'ref_heater_2',
-                      'naptha_heater',
-                      'naptha_reboiler',
-                      'dhds_heater_3',
-                      'hcr_1',
-                      'hcr_2',
-                      'rxn_r_1',
-                      'rxn_r_4',
-                      'coker_1',
-                      'coker_2',
-                      'coker_e',
-                      'coker_w',
-                      'h2_plant_2',
-                      'dhds_heater_1',
-                      'dhds_reboiler_1',
-                      'dhds_heater_2',
-                      'h_furnace_n',
-                      'h_furnace_s',
-                      'calciner_1',
-                      'calciner_2',
-                      'iht_heater',
-                      'boiler_4',
-                      'boiler_5',
-                      'boiler_6',
-                      'boiler_7',
-                      'h2_flare',
-                      ]
+    'crude_vtg',
+    'crude_rfg',
+    'n_vac',
+    's_vac',
+    'ref_heater_1',
+    'ref_heater_2',
+    'naptha_heater',
+    'naptha_reboiler',
+    'dhds_heater_3',
+    'hcr_1',
+    'hcr_2',
+    'rxn_r_1',
+    'rxn_r_4',
+    'coker_1',
+    'coker_2',
+    'coker_e',
+    'coker_w',
+    'h2_plant_2',
+    'dhds_heater_1',
+    'dhds_reboiler_1',
+    'dhds_heater_2',
+    'h_furnace_n',
+    'h_furnace_s',
+    'calciner_1',
+    'calciner_2',
+    'iht_heater',
+    'boiler_4',
+    'boiler_5',
+    'boiler_6',
+    'boiler_7',
+    'h2_flare',
+    ]
+
+pollutants_all = [
+    # criteria
+    'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4',
+    # GHG
+    'CO2'
+    ]
 
 pollutants_to_calculate = [
-                           # criteria
-                           'NOx',
-                           'CO',
-                           'SO2',
-                           'VOC',
-                           'PM', 'PM25', 'PM10',
-                           'H2SO4',
-#                           'CO2'
-                           ]
+    # criteria
+    'NOx',
+    'CO',
+    'SO2',
+    'VOC',
+    'PM', 'PM25', 'PM10',
+    'H2SO4',
+    # GHG
+    # 'CO2'
+    ]
+
 if GHG:
-    equip_to_calculate = ['coker_e','coker_w']
+    equip_to_calculate = ['coker_e', 'coker_w']
     pollutants_to_calculate = ['CO2']
 
 #### configure formatting and logging ####
@@ -200,32 +207,32 @@ if write_month_names:
     month_map = generate_month_map()
 
 Qmap = {
-        1   : 'Q1',
-        2   : 'Q1',
-        3   : 'Q1',
-        4   : 'Q2',
-        5   : 'Q2',
-        6   : 'Q2',
-        7   : 'Q3',
-        8   : 'Q3',
-        9   : 'Q3',
-        10  : 'Q4',
-        11  : 'Q4',
-        12  : 'Q4',
+    1 : 'Q1',
+    2 : 'Q1',
+    3 : 'Q1',
+    4 : 'Q2',
+    5 : 'Q2',
+    6 : 'Q2',
+    7 : 'Q3',
+    8 : 'Q3',
+    9 : 'Q3',
+    10: 'Q4',
+    11: 'Q4',
+    12: 'Q4',
 
-        'Jan': 'Q1',
-        'Feb': 'Q1',
-        'Mar': 'Q1',
-        'Apr': 'Q2',
-        'May': 'Q2',
-        'Jun': 'Q2',
-        'Jul': 'Q3',
-        'Aug': 'Q3',
-        'Sep': 'Q3',
-        'Oct': 'Q4',
-        'Nov': 'Q4',
-        'Dec': 'Q4'
-       }
+    'Jan': 'Q1',
+    'Feb': 'Q1',
+    'Mar': 'Q1',
+    'Apr': 'Q2',
+    'May': 'Q2',
+    'Jun': 'Q2',
+    'Jul': 'Q3',
+    'Aug': 'Q3',
+    'Sep': 'Q3',
+    'Oct': 'Q4',
+    'Nov': 'Q4',
+    'Dec': 'Q4'
+    }
 
 def verify_pollutants_to_calc(pol_list):
     """Ensure only criteria or GHG pollutants are being calculated, not both."""
@@ -237,107 +244,102 @@ def verify_pollutants_to_calc(pol_list):
         sys.exit()
     
 equip_types = {
-        'coker_1'        : 'coker_old'   ,
-        'coker_2'        : 'coker_old'   ,
-        'coker_e'        : 'coker_new'   ,
-        'coker_w'        : 'coker_new'   ,
-        'calciner_1'     : 'calciner'    ,
-        'calciner_2'     : 'calciner'    ,
-        'h2_plant_2'     : 'h2plant'     ,
-        'h2_flare'       : 'flare'       ,
-        'crude_rfg'      : 'heaterboiler',
-        'crude_vtg'      : 'heaterboiler',
-        'n_vac'          : 'heaterboiler',
-        's_vac'          : 'heaterboiler',
-        'ref_heater_1'   : 'heaterboiler',
-        'ref_heater_2'   : 'heaterboiler',
-        'naptha_heater'  : 'heaterboiler',
-        'naptha_reboiler': 'heaterboiler',
-        'dhds_heater_3'  : 'heaterboiler',
-        'hcr_1'          : 'heaterboiler',
-        'hcr_2'          : 'heaterboiler',
-        'rxn_r_1'        : 'heaterboiler',
-        'rxn_r_4'        : 'heaterboiler',
-        'dhds_heater_1'  : 'heaterboiler',
-        'dhds_heater_1'  : 'heaterboiler',
-        'dhds_reboiler_1': 'heaterboiler',
-        'dhds_reboiler_1': 'heaterboiler',
-        'dhds_heater_2'  : 'heaterboiler',
-        'h_furnace_n'    : 'heaterboiler',
-        'h_furnace_s'    : 'heaterboiler',
-        'iht_heater'     : 'heaterboiler',
-        'boiler_4'       : 'heaterboiler',
-        'boiler_5'       : 'heaterboiler',
-        'boiler_6'       : 'heaterboiler',
-        'boiler_7'       : 'heaterboiler'
-        }
+    'coker_1'        : 'coker_old'   ,
+    'coker_2'        : 'coker_old'   ,
+    'coker_e'        : 'coker_new'   ,
+    'coker_w'        : 'coker_new'   ,
+    'calciner_1'     : 'calciner'    ,
+    'calciner_2'     : 'calciner'    ,
+    'h2_plant_2'     : 'h2plant'     ,
+    'h2_flare'       : 'flare'       ,
+    'crude_rfg'      : 'heaterboiler',
+    'crude_vtg'      : 'heaterboiler',
+    'n_vac'          : 'heaterboiler',
+    's_vac'          : 'heaterboiler',
+    'ref_heater_1'   : 'heaterboiler',
+    'ref_heater_2'   : 'heaterboiler',
+    'naptha_heater'  : 'heaterboiler',
+    'naptha_reboiler': 'heaterboiler',
+    'dhds_heater_3'  : 'heaterboiler',
+    'hcr_1'          : 'heaterboiler',
+    'hcr_2'          : 'heaterboiler',
+    'rxn_r_1'        : 'heaterboiler',
+    'rxn_r_4'        : 'heaterboiler',
+    'dhds_heater_1'  : 'heaterboiler',
+    'dhds_heater_1'  : 'heaterboiler',
+    'dhds_reboiler_1': 'heaterboiler',
+    'dhds_reboiler_1': 'heaterboiler',
+    'dhds_heater_2'  : 'heaterboiler',
+    'h_furnace_n'    : 'heaterboiler',
+    'h_furnace_s'    : 'heaterboiler',
+    'iht_heater'     : 'heaterboiler',
+    'boiler_4'       : 'heaterboiler',
+    'boiler_5'       : 'heaterboiler',
+    'boiler_6'       : 'heaterboiler',
+    'boiler_7'       : 'heaterboiler'
+    }
 
-equip_types_to_calculate = set([equip_types[emis_unit] for emis_unit
-                                                       in equip_to_calculate])
+equip_types_to_calculate = set([equip_types[emis_unit]
+                                for emis_unit
+                                in equip_to_calculate])
 
 # column names for final output
 output_colnames_map = {
-                'month'        : 'Month',
-                'equipment'    : 'Equipment',
-                'stack_dscfh'  : 'Combined Fuel Gas',
-                'fuel_rfg'     : 'Refinery Fuel Gas',
-                'fuel_ng'      : 'Natural Gas',
-                'coke_tons'    : 'Calcined Coke',
-                'nox'          : 'NOx',
-                'co'           : 'CO',
-                'so2'          : 'SO2',
-                'voc'          : 'VOC', 
-                'pm'           : 'PM',
-                'pm25'         : 'PM25',
-                'pm10'         : 'PM10',
-                'h2so4'        : 'H2SO4',
-                'co2'          : 'CO2',
-                'h2s'          : 'H2S',
-                'h2s_cems'     : 'H2S_CEMS_src'
-                }
-
-pollutants_all = [
-                    # criteria
-                    'NOx', 'CO', 'SO2', 'VOC', 'PM', 'PM25', 'PM10', 'H2SO4',
-                    # GHG
-                    'CO2'
-                 ]
+    'month'      : 'Month',
+    'equipment'  : 'Equipment',
+    'stack_dscfh': 'Combined Fuel Gas',
+    'fuel_rfg'   : 'Refinery Fuel Gas',
+    'fuel_ng'    : 'Natural Gas',
+    'coke_tons'  : 'Calcined Coke',
+    'nox'        : 'NOx',
+    'co'         : 'CO',
+    'so2'        : 'SO2',
+    'voc'        : 'VOC', 
+    'pm'         : 'PM',
+    'pm25'       : 'PM25',
+    'pm10'       : 'PM10',
+    'h2so4'      : 'H2SO4',
+    'co2'        : 'CO2',
+    'h2s'        : 'H2S',
+    'h2s_cems'   : 'H2S_CEMS_src'
+    }
 
 h2s_cems_map = {
-    'uses_coker_h2s': ['coker_e', 'coker_w'],
+    'uses_coker_h2s'   : ['coker_e', 'coker_w'],
     'uses_cokerOLD_h2s': ['coker_1', 'coker_2'],
-    'uses_CVTG_h2s' : ['crude_vtg'],
-    'uses_RFG_h2s'  : ['crude_rfg',
-                       'n_vac',
-                       's_vac',
-                       'boiler_4',
-                       'boiler_5',
-                       'boiler_6',
-                       'boiler_7',
-                       'hcr_1',
-                       'rxn_r_1',
-                       'dhds_heater_1',
-                       'dhds_reboiler_1',
-                       'ref_heater_2',
-                       'dhds_heater_2',
-                       'h_furnace_n',
-                       'h_furnace_s',
-                       'naptha_heater',
-                       'naptha_reboiler',
-                       'rxn_r_4',
-                       'iht_heater',
-                       'ref_heater_1',
-                       'ref_heater_2',
-                       'dhds_heater_3',
-                       'hcr_1',
-                       'hcr_2',
-                       'h2_plant_2'
-                      ]
-               }
+    'uses_CVTG_h2s'    : ['crude_vtg'],
+    'uses_RFG_h2s'     : ['crude_rfg',
+                          'n_vac',
+                          's_vac',
+                          'boiler_4',
+                          'boiler_5',
+                          'boiler_6',
+                          'boiler_7',
+                          'hcr_1',
+                          'rxn_r_1',
+                          'dhds_heater_1',
+                          'dhds_reboiler_1',
+                          'ref_heater_2',
+                          'dhds_heater_2',
+                          'h_furnace_n',
+                          'h_furnace_s',
+                          'naptha_heater',
+                          'naptha_reboiler',
+                          'rxn_r_4',
+                          'iht_heater',
+                          'ref_heater_1',
+                          'ref_heater_2',
+                          'dhds_heater_3',
+                          'hcr_1',
+                          'hcr_2',
+                          'h2_plant_2' # (this does not have H2S)
+                          ]
+    }
 
 # these lists are based on the respective EF spreadsheets and therefore
 # should not be modified without modifying those sources as well
-FG_toxics_with_EFs = [
+
+toxics_with_EFs = [
     # organics
     'Acenaphthene',
     'Acenaphthylene',
@@ -348,73 +350,43 @@ FG_toxics_with_EFs = [
     'Benzo(a)anthracene',
     'Benzo(a)pyrene',
     'Benzo(b)fluoranthene',
+    'Benzo(e)pyrene',
     'Benzo(g,h,i)perylene',
     'Benzo(k)fluoranthene',
+    '1,3-Butadiene',
+    'Butane',
+    'Chloroform',
     'Carbon Disulfide',
     'Carbonyl Sulfide',
+    '2-Chloronaphthalene',
     'Chromium (hexavalent)',
-    'Chrysene',
-    'Cyclopentane',
-    'Dibenz(a,h)anthracene',
-    'Ethylbenzene',
-    'Fluoranthene',
-    'Fluorene',
-    'Formaldehyde',
-    'Indene',
-    'Indeno(1,2,3-cd)pyrene',
-    'Methylcyclohexane',
-    'Naphthalene',
-    'Phenanthrene',
-    'Phenol',
-    'Propylene',
-    'Pyrene',
-    'Toluene',
-    'Xylenes (mixed isomers)',
-    'm-xylene',
-    'o-xylene',
-    'p-xylene',
-    # metals
-    'Antimony',
-    'Arsenic',
-    'Barium',
-    'Beryllium',
-    'Cadmium',
-    'Chromium',
-    'Copper',
-    'Lead',
-    'Manganese',
-    'Mercury',
-    'Nickel',
-    'Phosphorus',
-    'Selenium',
-    'Silver',
-    'Thallium',
-    'Zinc'
-    ]
-
-NG_toxics_with_EFs = [
-    # organics
-    'Acenaphthene',
-    'Acenaphthylene',
-    'Acetaldehyde',
-    'Acrolein',
-    'Anthracene',
-    'Benzene',
-    'Benzo(a)anthracene',
-    'Benzo(a)pyrene',
-    'Benzo(b)fluoranthene',
-    'Benzo(g,h,i)perylene',
-    'Benzo(k)fluoranthene',
-    'Butane',
     'Chrysene',
     'Dibenz(a,h)anthracene',
     'Dichlorobenzene',
     '7,12-Dimethylbenz(a) anthracene',
+    'Dioxin: 4D 2378',
+    'Dioxin: 5D 12378',
+    'Dioxin: 6D 123478',
+    'Dioxin: 6D 123678',
+    'Dioxin: 6D 123789',
+    'Dioxin: 7D 1234678',
+    'Dioxin: 8D',
     'Ethane',
     'Ethylbenzene',
     'Fluoranthene',
     'Fluorene',
+    'Fluoride',
     'Formaldehyde',
+    'Furan: 4F 2378',
+    'Furan: 5F 12378',
+    'Furan: 5F 23478',
+    'Furan: 6F 123478',
+    'Furan: 6F 123678',
+    'Furan: 6F 123789',
+    'Furan: 6F 234678',
+    'Furan: 7F 1234678',
+    'Furan: 7F 1234789',
+    'Furan: 8F',
     'Hexane',
     'Hydrogen sulfide',
     'Indeno(1,2,3-cd)pyrene',
@@ -422,12 +394,15 @@ NG_toxics_with_EFs = [
     '2-Methylnaphthalene',
     'Naphthalene',
     'Pentane',
+    'Perylene',
     'Phenanthrene',
     'Phenol',
     'Propane',
     'Propylene',
     'Pyrene',
     'Toluene',
+    '1,1,1-Trichloroethane',
+    'o-xylene',
     'Xylenes (mixed isomers)',
     # metals
     'Antimony',
@@ -435,7 +410,6 @@ NG_toxics_with_EFs = [
     'Barium',
     'Beryllium',
     'Cadmium',
-    'Chromium (hexavalent)',
     'Chromium (total)',
     'Cobalt',
     'Copper',
@@ -450,55 +424,7 @@ NG_toxics_with_EFs = [
     'Zinc'
     ]
 
-PSA_toxics_with_EFs = [
-    # organics
-    'Acenaphthene',
-    'Acetaldehyde',
-    'Acenaphthylene',
-    'Anthracene',
-    'Benzene',
-    'Benzo(a)anthracene',
-    'Benzo(a)pyrene',
-    'Benzo(b)fluoranthene',
-    'Benzo(g,h,i)perylene',
-    'Benzo(k)fluoranthene',
-    'Chromium (hexavalent)',
-    'Chrysene',
-    'Dibenz(a,h)anthracene',
-    'Ethylbenzene',
-    'Fluoranthene',
-    'Fluorene',
-    'Formaldehyde',
-    'Hydrogen sulfide',
-    'Indeno(1,2,3-cd)pyrene',
-    'Naphthalene',
-    'Phenanthrene',
-    'Phenol',
-    'Propylene',
-    'Pyrene',
-    'Toluene',
-    'Xylenes (mixed isomers)',
-    # metals
-    'Arsenic',
-    'Antimony',
-    'Barium',
-    'Beryllium',
-    'Cadmium',
-    'Chromium',
-    'Copper',
-    'Lead',
-    'Manganese',
-    'Mercury',
-    'Nickel',
-    'Phosphorus',
-    'Selenium',
-    'Silver',
-    'Thallium',
-    'Zinc'
-    ]
-
-h2plant2_toxics_reindexer = [
-    ]
+h2plant2_toxics_reindexer = []
 
 calciner_toxics_with_EFs = [
     # organics
