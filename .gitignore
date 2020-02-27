@@ -1,5 +1,6 @@
 # ignore the following
 
+*.txt
 *.pdf
 *.pyc
 *.ipynb
