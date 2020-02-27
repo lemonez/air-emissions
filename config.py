@@ -24,10 +24,10 @@ GHG = False                                     # calculate GHG?
 
 # calculate toxics?
 calculate_toxics = True
-calculate_FG_toxics = True
+calculate_FG_toxics = False
 calculate_NG_toxics = False # delete this? now h2_plant_2 has its own flag
 calculate_calciner_toxics = False
-calculate_h2plant2_toxics = False
+calculate_h2plant2_toxics = True
 if calculate_toxics:
     out_dir_child = str(data_year)+'_toxics/'
 
@@ -332,7 +332,7 @@ h2s_cems_map = {
                           'dhds_heater_3',
                           'hcr_1',
                           'hcr_2',
-                          'h2_plant_2' # (this does not have H2S)
+                          'h2_plant_2' # (this does not have H2S in it)
                           ]
     }
 
@@ -423,8 +423,6 @@ toxics_with_EFs = [
     'Vanadium',
     'Zinc'
     ]
-
-h2plant2_toxics_reindexer = []
 
 calciner_toxics_with_EFs = [
     # organics

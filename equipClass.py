@@ -2084,7 +2084,7 @@ class MonthlyH2Plant(AnnualH2Plant):
                                             self.ts_interval)
         
         self.monthly_emis     = self.calculate_monthly_emissions()
-    #    self.monthly_toxics   = self.calculate_monthly_toxics()
+        self.monthly_toxics   = self.calculate_monthly_toxics()
         self.monthly_emis_h2s = None
 
     ## emissions calc methods overrides parent methods
@@ -2122,7 +2122,7 @@ class MonthlyH2Plant(AnnualH2Plant):
         monthly.loc['h2so4']     = monthly.loc['so2'] * 0.026
         monthly = monthly.reindex(self.col_name_order)
         monthly.loc[self.col_name_order[4:-1]] = (
-            monthly.loc[self.col_name_order[4:-1]] / 2000)             # lbs --> tons
+            monthly.loc[self.col_name_order[4:-1]] / 2000) # lbs --> tons
         return monthly
     
     def calculate_monthly_toxics(self):
@@ -2138,7 +2138,7 @@ class MonthlyH2Plant(AnnualH2Plant):
             tox['lbs'] = tox['lbs'] / 1000
             tox_ordered = tox['lbs'].reindex(self.get_reindexer_for_toxics())
             tox_ser = pd.concat([base_ser, tox_ordered])
-            tox_ser.name = 'from'+fuel[4:]
+            tox_ser.name = 'from' + fuel[4:]
             toxics[fuel] = tox_ser
         alltox = pd.concat(toxics, axis=1, sort=False).replace(np.nan, 0)
         alltox['total'] = alltox.sum(axis=1)
