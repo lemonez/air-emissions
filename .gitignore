@@ -1,21 +1,20 @@
 # ignore the following
 
+*.txt
 *.pdf
 *.pyc
 *.ipynb
 *.csv
 *.xls*
-*notes.txt
 *pycache*
 *.ipynb*
-output*/
 output*
+output*/
 Data/Annual/NotParsed/*
 junk.py
 deepreloader.py
-refactor.py
 Iter2018/
 equiptests.py
-backlog.txt
-
+!backlog.txt
+!README.md
 !data_2019/static/*
