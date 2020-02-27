@@ -14,7 +14,7 @@ junk.py
 *pycache*
 *.csh
 deepreloader.py
-!data/static/equipmap.csv
+!data_2019/static/equipmap.csv
 refactor.py
 Iter2018/
 equiptests.py
