@@ -1,0 +1,48 @@
+#### TODO list
+
+#bug?
+    # MonthlyCokerOLD(): # why do old cokers not need EFs??
+
+# bug
+    # When selecting only the first months of the year without later months,
+    # certain equipment raise KeyError because no PI tags yet for CEMS that were
+    # installed later in the year. When all months are run concurrently, the
+    # CEMS df is populated w/ NaN for months where that unit was not yet built,
+    # because of the merging of dfs at the year level. Need to build in logic to
+    # look in the PI tag dictionary for what SHOULD be there, and add column of
+    # NaN values for that PI tag for months where that unit doesn't exist.
+
+
+############
+##FEATURES##
+############
+
+- if oxygen > 1% , need to first recalculate GBTU/CF value
+    (change and see if it affects results)
+
+# feature
+    # don't parse CEMS if not needed (currently just a hacky if/else in class method
+
+# feature
+    # function to clean up messy missing value flags written for PM10/PM25
+
+# refactor
+    # merge CokerCO2 class into base coker class to enable method sharing
+
+# refactor
+    # move parse_annual_h2stack to H2Plant class?
+
+
+- out put 2 sig figs instead of decimal places
+- implement flag and file naming scheme for GHG output
+- fix argparse so that you can enter equipment as list (right now it lists the string you enter)
+- add unit 10 crude values together for output
+- incorporate H2S code into class, refactor
+- concatenate H2s output with other pollutants
+
+
+# TODO: refactor calculate_monthly_equip_emissions() method; it is a hot mess
+# TODO: refactor convert_from_ppm() into 'convert_from_ppm' and 'convert_from_mscfh' methods
+# TODO: refactor first three methods for calculating toxics; they are tangled
+
+
