@@ -16,7 +16,7 @@ data_dir      = './data_'+str(data_year)+'/'    # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = str(data_year)+'_emissions/'
+out_dir_child = str(data_year)+'_emissions_newtoxics/'
 
 round_decimals = 10
 MAX_CEMS_TO_FILL = 18                           # maximum consecutive missing CEMS values to fill
@@ -24,7 +24,7 @@ MAX_CEMS_TO_FILL = 18                           # maximum consecutive missing CE
 GHG = False                                     # calculate GHG?
 
 # what to calculate?
-calculate_criteria = True                       # criteria pollutants (or GHG)
+calculate_criteria = True                      # criteria pollutants (or GHG)
 calculate_FG_toxics = True                     # toxics based on fuel gas usage
 calculate_calciner_toxics = True               # toxics from calciners
 calculate_h2plant2_toxics = True               # toxics from h2_plant_2
@@ -126,8 +126,8 @@ equip_to_calculate = [
     'rxn_r_4',
     'coker_1',
     'coker_2',
-    'coker_e',
     'coker_w',
+    'coker_e',
     'h2_plant_2',
     'dhds_heater_1',
     'dhds_reboiler_1',
@@ -359,6 +359,7 @@ toxics_with_EFs = [
     '2-Chloronaphthalene',
     'Chromium (hexavalent)',
     'Chrysene',
+    'Cyclopentane',
     'Dibenz(a,h)anthracene',
     'Dichlorobenzene',
     '7,12-Dimethylbenz(a) anthracene',
@@ -387,8 +388,10 @@ toxics_with_EFs = [
     'Furan: 8F',
     'Hexane',
     'Hydrogen sulfide',
+    'Indene',
     'Indeno(1,2,3-cd)pyrene',
     '3-Methylchloroanthrene',
+    'Methylcyclohexane',
     '2-Methylnaphthalene',
     'Naphthalene',
     'Pentane',
@@ -400,7 +403,9 @@ toxics_with_EFs = [
     'Pyrene',
     'Toluene',
     '1,1,1-Trichloroethane',
+    'm-xylene',
     'o-xylene',
+    'p-xylene',
     'Xylenes (mixed isomers)',
     # metals
     'Antimony',
@@ -418,8 +423,11 @@ toxics_with_EFs = [
     'Nickel',
     'Phosphorus',
     'Selenium',
+    'Silver',
+    'Thallium',
     'Vanadium',
-    'Zinc'
+    'Zinc',
+    'Zinc_boiler5'
     ]
 
 calciner_toxics_with_EFs = [

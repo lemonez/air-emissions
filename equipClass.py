@@ -239,7 +239,8 @@ class AnnualEquipment(object):
         """Parse EFs for fuel gas / natural gas toxics; return pd.DataFrame."""
         toxics = pd.read_excel(self.fpath_toxicsEFs,
                                header=3,
-                               usecols=[0,2,3])
+                               usecols=[0,2,3],
+                               nrows=89)
         toxics.rename(columns={'Chemical' : 'pollutant',
                                'EF'       : 'ef',
                                'EF Units' : 'units'},

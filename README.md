@@ -1,8 +1,6 @@
 # air-emissions
 tool to calculate refinery emissions for government reporting
 
-
-
 #########
 ##USAGE##
 #########
@@ -64,3 +62,10 @@ tool to calculate refinery emissions for government reporting
         CEMS/
             01-YYYY_...             # monthly CEMS data files; must be named as 'MM-YYYY_...'
             02-YYYY_...
+
+
+#########
+##NOTES##
+#########
+
+- Boiler #5 has a different EF for Zinc; this EF is added to the table as 'Zinc_boiler5', as if it were just another TAP and is therefore calculated for all emissions units. The resulting Zinc_boiler5 values are meaningless for all emissions units except for boiler 5, and the 'Zinc' value is meaningless for boiler 5. 
