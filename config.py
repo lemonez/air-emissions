@@ -16,7 +16,7 @@ data_dir      = './data_'+str(data_year)+'/'    # all input data files
 out_dir       = './output/'
 log_dir       = out_dir+'logs/'
 log_suffix    = ''
-out_dir_child = str(data_year)+'_emissions_newtoxics/'
+out_dir_child = str(data_year)+'_emissions/'
 
 round_decimals = 10
 MAX_CEMS_TO_FILL = 18                           # maximum consecutive missing CEMS values to fill

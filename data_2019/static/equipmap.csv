@@ -18,14 +18,6 @@ NULL,hcr_2,31,HC 2nd Stage Fract Reboiler,NULL,NULL,NULL,NULL,NULL
 NULL,rxn_r_4,33,R-4 Reaction Heater,NULL,NULL,NULL,NULL,NULL
 12AI55A.PV,coker_1,40,Coker N Charge Heater #1,H2S,0-300,ppm,30,15
 NULL,coker_2,41,Coker S Charge Heater #2,NULL,NULL,NULL,NULL,NULL
-12AI8060A.PV,coker_e,40 E,Coker E Charge Heater,Dry O2,0-300,%,NULL,NULL
-12AI8060B.PV,coker_e,40 E,Coker E Charge Heater,NO2,0-300,ppm,NULL,NULL
-12AI8060C.PV,coker_e,40 E,Coker E Charge Heater,CO,0-300,ppm,NULL,NULL
-12AI8060D.PV,coker_e,40 E,Coker E Charge Heater,Lo SO2,0-300,ppm,NULL,NULL
-12AI8060E.PV,coker_e,40 E,Coker E Charge Heater,CO2,NULL,%,NULL,NULL
-12AI8060F.PV,coker_e,40 E,Coker E Charge Heater,NO,0-300,ppm,NULL,NULL
-12AI8060G.PV,coker_e,40 E,Coker E Charge Heater,Hi SO2,0-300,ppm,NULL,NULL
-12AI3751.PV,coker_e,40 E,Coker E Charge Heater,H2S,0-300,ppm,NULL,NULL
 12AI7060A.PV,coker_w,41 W,Coker W Charge Heater,Dry O2,NULL,%,NULL,NULL
 12AI7060B.PV,coker_w,41 W,Coker W Charge Heater,NO2,0-300,ppm,NULL,NULL
 12AI7060C.PV,coker_w,41 W,Coker W Charge Heater,CO,0-300,ppm,NULL,NULL
@@ -34,6 +26,14 @@ NULL,coker_2,41,Coker S Charge Heater #2,NULL,NULL,NULL,NULL,NULL
 12AI7060F.PV,coker_w,41 W,Coker W Charge Heater,NO,0-300,ppm,NULL,NULL
 12AI7060G.PV,coker_w,41 W,Coker W Charge Heater,Hi SO2,0-300,ppm,NULL,NULL
 12AI3751.PV,coker_w,41 W,Coker W Charge Heater,H2S,0-300,ppm,NULL,NULL
+12AI8060A.PV,coker_e,40 E,Coker E Charge Heater,Dry O2,0-300,%,NULL,NULL
+12AI8060B.PV,coker_e,40 E,Coker E Charge Heater,NO2,0-300,ppm,NULL,NULL
+12AI8060C.PV,coker_e,40 E,Coker E Charge Heater,CO,0-300,ppm,NULL,NULL
+12AI8060D.PV,coker_e,40 E,Coker E Charge Heater,Lo SO2,0-300,ppm,NULL,NULL
+12AI8060E.PV,coker_e,40 E,Coker E Charge Heater,CO2,NULL,%,NULL,NULL
+12AI8060F.PV,coker_e,40 E,Coker E Charge Heater,NO,0-300,ppm,NULL,NULL
+12AI8060G.PV,coker_e,40 E,Coker E Charge Heater,Hi SO2,0-300,ppm,NULL,NULL
+12AI3751.PV,coker_e,40 E,Coker E Charge Heater,H2S,0-300,ppm,NULL,NULL
 46AI601.PV,h2_plant_2,46,H2 Plant #2,Dry O2,0-25,%,2,1
 46AI60_.PV,h2_plant_2,46,H2 Plant #2,Wet O2,0-25,%,2,1
 46AI602.PV,h2_plant_2,46,H2 Plant #2,NOX,0-100,ppm,10,5
