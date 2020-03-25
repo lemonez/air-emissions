@@ -772,11 +772,11 @@ class AnnualEquipment(object):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
         if self.unit_key == 'h2_plant_2':
             stack = self.get_monthly_PSAstack().copy()
-            stack['PSA_flow'] = (stack['46FC36.PV']
-                                 * 1000
-                                 * self.HHV_PSA
-                                 / 1000000
-                                 * self.f_factor_PSA)
+            stack['PSA_flow'] = (stack['46FC36.PV']     # Mscf
+                                 * 1000                 # scf/Mscf
+                                 * self.HHV_PSA         # Btu/scf
+                                 / 1000000              # Btu/MMBtu
+                                 * self.f_factor_PSA)   # scf/MMBtu
             stack['NG_flow']  = ((stack['46FI187.PV'] + stack['46FS38.PV'])
                                  * 1000
                                  * self.HHV_NG
@@ -788,7 +788,7 @@ class AnnualEquipment(object):
             
             both_df['PSA_dscfh'] = (both_df['PSA_flow'] * 20.9 / (20.9 - both_df['o2_%']))
             both_df['NG_dscfh']  = (both_df['NG_flow']  * 20.9 / (20.9 - both_df['o2_%']))
-            both_df['dscfh']  = both_df['PSA_dscfh'] + both_df['NG_dscfh']
+            both_df['dscfh'] = both_df['PSA_dscfh'] + both_df['NG_dscfh']
         else:
             both_df['dscfh'] = (both_df['fuel_rfg']
                                 * 1000 
@@ -1997,7 +1997,7 @@ class AnnualH2Plant(AnnualEquipment):
         """Constructor for parsing annual calciner data."""
         self.annual_equip = annual_equip
         
-        self.fpath_h2stack = self.annual_equip.fpath_h2stack
+        self.fpath_h2stack = self.annual_equip.fpath_h2stack # no longer using
         self.fpath_PSAstack= self.annual_equip.fpath_PSAstack
         
         self.PSAstack_annual = self.parse_annual_PSAstack()
@@ -2062,7 +2062,7 @@ class MonthlyH2Plant(AnnualH2Plant):
         self.monthly_toxics   = self.calculate_monthly_toxics()
         self.monthly_emis_h2s = None
 
-    ## emissions calc methods overrides parent methods
+    ## emissions calc methods override parent methods
     def calculate_monthly_emissions(self):
         monthly = self.aggregate_hourly_to_monthly()
         # calculate all pollutants except for H2SO4
