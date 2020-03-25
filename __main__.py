@@ -72,11 +72,19 @@ def main():
         print('\n')
         AnnualParser(
             ae, calculation='FG_toxics').read_calculate_write_annual_emissions()
-    if cf.calculate_calciner_toxics:
+    if (cf.calculate_calciner_toxics
+        and (
+             'calciner_1' in cf.equip_to_calculate
+             or
+             'calciner_2' in cf.equip_to_calculate
+            )
+       ):
         print('\n')
         AnnualParser(
             ae, calculation='calciner_toxics').read_calculate_write_annual_emissions()
-    if cf.calculate_h2plant2_toxics:
+    if (cf.calculate_h2plant2_toxics
+        and 'h2_plant_2' in cf.equip_to_calculate 
+       ):
         print('\n')
         AnnualParser(
             ae, calculation='h2plant2_toxics').read_calculate_write_annual_emissions()
