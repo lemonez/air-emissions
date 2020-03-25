@@ -14,6 +14,13 @@ from collections import OrderedDict
 import config as cf
 import ffactor as ff
 
+PPM_CONV_FACTS = {
+                #       MW      const   hr/min
+                'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
+                'co' : (28   * 1.557E-7 / 60), # 7.277e-08
+                'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
+                }
+
 class AnnualEquipment(object):
     """Contains annual facility-wide data for emissions calculations."""
     """
@@ -782,13 +789,6 @@ class AnnualEquipment(object):
         if 'calciner' in self.unit_key:
             both_df = self.calculate_calciner_total_stack_flow(both_df)
         
-        ppm_conv_facts = {
-                         #       MW      const   hr/min
-                         'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
-                         'co' : (28   * 1.557E-7 / 60), # 7.277e-08
-                         'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
-                          }
-        
         # if there are CEMS pols to convert
         ptags_list = self.equip_ptags[self.unit_key]
         cems_pol_list = [self.ptags_pols[tag]
@@ -797,7 +797,7 @@ class AnnualEquipment(object):
         for pol in cems_pol_list:
             both_df[pol.split('_')[0]] = (
                                     both_df[pol]
-                                    * ppm_conv_facts[pol.split('_')[0]]
+                                    * PPM_CONV_FACTS[pol.split('_')[0]]
                                         # ==> lb/scf
                                     * both_df['dscfh'])
                                         # ==> lb
@@ -1363,12 +1363,6 @@ class MonthlyCoker(AnnualCoker):
         if both_df.shape[0] == 0:
             return both_df
         else:       
-            ppm_conv_facts = {
-                                #       MW      const   hr/min
-                                'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
-                                'co' : (28   * 1.557E-7 / 60), # 7.277e-08
-                                'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
-                             }
             ptags_list = self.equip_ptags[self.unit_key]
             cems_pol_list = ['nox_ppm', 'co_ppm', 'so2_ppm']
                     # cems_pol_list = [self.ptags_pols[tag] for tag in ptags_list
@@ -1378,7 +1372,7 @@ class MonthlyCoker(AnnualCoker):
             for pol in cems_pol_list:
                 both_df[pol.split('_')[0]] = (
                                         both_df[pol]
-                                        * ppm_conv_facts[pol.split('_')[0]]
+                                        * PPM_CONV_FACTS[pol.split('_')[0]]
                                         * both_df['dscfh'])
             return both_df
     
@@ -2119,14 +2113,7 @@ class MonthlyH2Plant(AnnualH2Plant):
         
         both_df['PSA_dscfh'] = (both_df['PSA_flow'] * 20.9 / (20.9 - both_df['o2_%']))
         both_df['NG_dscfh']  = (both_df['NG_flow']  * 20.9 / (20.9 - both_df['o2_%']))
-        
-        ppm_conv_facts = {
-                        #       MW      const   hr/min
-                        'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
-                        'co' : (28   * 1.557E-7 / 60), # 7.277e-08
-                        'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
-                        }
-        
+                
         # if there are CEMS pols to convert
         ptags_list = self.equip_ptags[self.unit_key]
         cems_pol_list = [self.ptags_pols[tag]
@@ -2137,7 +2124,7 @@ class MonthlyH2Plant(AnnualH2Plant):
             for fuel_type in ['NG_', 'PSA_']:
                 both_df[fuel_type+pol.split('_')[0]] = (
                     both_df[pol]
-                    * ppm_conv_facts[pol.split('_')[0]]
+                    * PPM_CONV_FACTS[pol.split('_')[0]]
                         # ==> lb/scf
                     * both_df[fuel_type+'dscfh'])
                         # ==> lb
