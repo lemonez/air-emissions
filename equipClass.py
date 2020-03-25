@@ -658,7 +658,7 @@ class AnnualEquipment(object):
                         EF_multiplier = 1
                     else:
                         if self.unit_key == 'h2_plant_2':
-                            fuel_type = 'flow'
+                            fuel_type = 'dscfh'
                         else:
                             fuel_type = 'fuel_rfg'
                     
@@ -770,32 +770,12 @@ class AnnualEquipment(object):
     
     def convert_from_ppm(self, both_df):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
-        if self.unit_key == 'h2_plant_2':
-            stack = self.get_monthly_PSAstack().copy()
-            stack['PSA_flow'] = (stack['46FC36.PV']     # Mscf
-                                 * 1000                 # scf/Mscf
-                                 * self.HHV_PSA         # Btu/scf
-                                 / 1000000              # Btu/MMBtu
-                                 * self.f_factor_PSA)   # scf/MMBtu
-            stack['NG_flow']  = ((stack['46FI187.PV'] + stack['46FS38.PV'])
-                                 * 1000
-                                 * self.HHV_NG
-                                 / 1000000
-                                 * self.f_factor_NG)
-            stack['PSA_mscf'] = stack['46FC36.PV']
-            stack['NG_mscf'] = stack['46FI187.PV'] + stack['46FS38.PV']
-            both_df = pd.concat([both_df, stack], axis=1)
-            
-            both_df['PSA_dscfh'] = (both_df['PSA_flow'] * 20.9 / (20.9 - both_df['o2_%']))
-            both_df['NG_dscfh']  = (both_df['NG_flow']  * 20.9 / (20.9 - both_df['o2_%']))
-            both_df['dscfh'] = both_df['PSA_dscfh'] + both_df['NG_dscfh']
-        else:
-            both_df['dscfh'] = (both_df['fuel_rfg']
-                                * 1000 
-                                * self.HHV_RFG
-                                / 1000000
-                                * self.f_factor_RFG
-                                * 20.9 / (20.9 - both_df['o2_%']))
+        both_df['dscfh'] = (both_df['fuel_rfg']
+                            * 1000 
+                            * self.HHV_RFG
+                            / 1000000
+                            * self.f_factor_RFG
+                            * 20.9 / (20.9 - both_df['o2_%']))
 # would like to break this into another method so that 
 # calculate_calciner_total_stack_flow() does not need a df passed to it as an arg
 # right now it is difficult to test, and this method is too nested
@@ -809,7 +789,7 @@ class AnnualEquipment(object):
                          'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
                           }
         
-# if there are CEMS pols to convert
+        # if there are CEMS pols to convert
         ptags_list = self.equip_ptags[self.unit_key]
         cems_pol_list = [self.ptags_pols[tag]
                          for tag in ptags_list
@@ -2058,18 +2038,39 @@ class MonthlyH2Plant(AnnualH2Plant):
                                             self.annual_equip.fpath_NG_chem,
                                             self.ts_interval)
         
-        self.monthly_emis     = self.calculate_monthly_emissions()
+        self.monthly_emis     = self.calculate_monthly_equip_emissions()
         self.monthly_toxics   = self.calculate_monthly_toxics()
         self.monthly_emis_h2s = None
 
-    ## emissions calc methods override parent methods
-    def calculate_monthly_emissions(self):
+    # emissions calc methods override parent methods
+    def calculate_monthly_equip_emissions(self):
+        """Return pd.Series of equipment unit emissions for specified month."""
         monthly = self.aggregate_hourly_to_monthly()
         # calculate all pollutants except for H2SO4
-        efs = self.flareEFs.copy()
-        NG_efs = (efs.loc[efs['flare_on']==False]
-                     .loc[efs['pollutant'].isin(['pm', 'voc'])]
-                     .set_index('pollutant'))
+       
+        for pol in ['nox', 'co', 'so2', 'voc', 'pm', 'pm25', 'pm10']:
+            # if no CEMS
+            if pol not in monthly.index:
+                # need this logic to avoid errors while PM25 & PM 10 EFs are added
+                if pol not in self.EFunits.loc[self.unit_key].index:
+                    monthly.loc[pol] = -9999 * 2000 / 12 # error flag that will show up as -9999
+                
+                EF_multiplier = monthly.loc['dscfh']
+        
+                    monthly.loc[pol] = (EF_multiplier
+                                        * self.equip_EF[self.unit_key][pol]
+                                        * self.get_conversion_multiplier(pol))def calculate_monthly_emissions(self):
+    def get_conversion_multiplier(self, pol, HHV_type):
+        """Pass pollutant and HHV type, return float multiplier to for conversion."""
+        if HHV_type
+        if (self.EFunits.loc[self.unit_key].loc[pol].loc['units'] == 'lb/mmbtu'):
+            multiplier = 1/1000 * self.HHV_NG
+        elif (self.EFunits.loc[self.unit_key].loc[pol].loc['units'] == 'lb/mmscf'):
+            multiplier = 1/1000 * self.HHV_NG
+
+
+        return multiplier
+
         for pol in ['pm', 'voc']:
             # use normal EFs for PSA offgas
             monthly.loc[pol] =  (
@@ -2099,6 +2100,48 @@ class MonthlyH2Plant(AnnualH2Plant):
         monthly.loc[self.col_name_order[4:-1]] = (
             monthly.loc[self.col_name_order[4:-1]] / 2000) # lbs --> tons
         return monthly
+    
+    def convert_from_ppm(self, both_df):
+        stack = self.get_monthly_PSAstack().copy()
+        stack['PSA_flow'] = (stack['46FC36.PV']     # Mscf
+                                * 1000                 # scf/Mscf
+                                * self.HHV_PSA         # Btu/scf
+                                / 1000000              # Btu/MMBtu
+                                * self.f_factor_PSA)   # scf/MMBtu
+        stack['NG_flow']  = ((stack['46FI187.PV'] + stack['46FS38.PV'])
+                                * 1000
+                                * self.HHV_NG
+                                / 1000000
+                                * self.f_factor_NG)
+        stack['PSA_mscf'] = stack['46FC36.PV']
+        stack['NG_mscf'] = stack['46FI187.PV'] + stack['46FS38.PV']
+        both_df = pd.concat([both_df, stack], axis=1)
+        
+        both_df['PSA_dscfh'] = (both_df['PSA_flow'] * 20.9 / (20.9 - both_df['o2_%']))
+        both_df['NG_dscfh']  = (both_df['NG_flow']  * 20.9 / (20.9 - both_df['o2_%']))
+        
+        ppm_conv_facts = {
+                        #       MW      const   hr/min
+                        'nox': (46.1 * 1.557E-7 / 60), # 1.196e-07
+                        'co' : (28   * 1.557E-7 / 60), # 7.277e-08
+                        'so2': (64   * 1.557E-7 / 60)  # 1.661e-07
+                        }
+        
+        # if there are CEMS pols to convert
+        ptags_list = self.equip_ptags[self.unit_key]
+        cems_pol_list = [self.ptags_pols[tag]
+                        for tag in ptags_list
+                        if self.ptags_pols[tag] != 'o2_%']
+        for pol in cems_pol_list:
+            # calculate emissions due to NG and PSA separately
+            for fuel_type in ['NG_', 'PSA_']:
+                both_df[fuel_type+pol.split('_')[0]] = (
+                    both_df[pol]
+                    * ppm_conv_facts[pol.split('_')[0]]
+                        # ==> lb/scf
+                    * both_df[fuel_type+'dscfh'])
+                        # ==> lb
+        return both_df
     
     def calculate_monthly_toxics(self):
         toxics = {}
