@@ -2057,7 +2057,7 @@ class MonthlyH2Plant(AnnualH2Plant):
                     if pol not in self.EFunits.loc[self.unit_key].index:
                         monthly.loc[pol] = -9999 * 2000 / 12 # error flag that will show up as -9999
                     else:
-                        EF_multiplier = monthly.loc[fuel_type+'dscfh']
+                        EF_multiplier = monthly.loc[fuel_type+'mscf']
                         monthly.loc[fuel_type+pol] = (EF_multiplier
                                         * self.equip_EF[self.unit_key][pol]
                                         * self.get_conversion_multiplier(pol, fuel_type))
