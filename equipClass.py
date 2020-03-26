@@ -775,9 +775,11 @@ class AnnualEquipment(object):
             return self.convert_from_ppm().sum()
         return self.merge_fuel_and_CEMS().sum()
     
-    def convert_from_ppm(self, both_df):
+    def convert_from_ppm(self, both_df=None):
         """Convert CEMS from ppm, return pd.DataFrame of hourly flow values."""
-        both_df = self.merge_fuel_and_CEMS()
+        # accomodate for cases when custom merged fuel-CEMS df must be passed
+        if both_df is None:
+            both_df = self.merge_fuel_and_CEMS()
         both_df['dscfh'] = (both_df['fuel_rfg']
                             * 1000 
                             * self.HHV_RFG
@@ -853,7 +855,8 @@ class AnnualEquipment(object):
     def get_conversion_multiplier(self, pol):
         """Pass pollutant name, return float multiplier to convert emissions to lbs."""
         if (self.EFunits.loc[self.unit_key]
-                        .loc[pol].loc['units'] == 'lb/mmbtu'):
+                        .loc[pol]
+                        .loc['units'] == 'lb/mmbtu'):
             if self.unit_key in ['coker_1', 'coker_2', 'coker_e', 'coker_w']:
                 multiplier = 1/1000 * self.HHV_cokerFG
             elif self.unit_key == 'crude_vtg':
@@ -861,13 +864,16 @@ class AnnualEquipment(object):
             else:
                 multiplier = 1/1000 * self.HHV_RFG
         elif (self.EFunits.loc[self.unit_key]
-                        .loc[pol].loc['units'] == 'lb/mscf'):
+                          .loc[pol]
+                          .loc['units'] == 'lb/mscf'):
             multiplier = 1
         elif (self.EFunits.loc[self.unit_key]
-                        .loc[pol].loc['units'] == 'lb/mmscf'):
+                          .loc[pol]
+                          .loc['units'] == 'lb/mmscf'):
             multiplier = 1/1000
         elif (self.EFunits.loc[self.unit_key]
-                        .loc[pol].loc['units'] == 'lb/hr'):
+                          .loc[pol]
+                          .loc['units'] == 'lb/hr'):
             fuel_type = 'fuel_rfg'
             if self.unit_key == 'h2_plant_2':
                 fuel_type = 'fuel_ng'
@@ -2033,9 +2039,9 @@ class MonthlyH2Plant(AnnualH2Plant):
                                             self.annual_equip.fpath_NG_chem,
                                             self.ts_interval)
         
-        # self.monthly_emis     = self.calculate_monthly_equip_emissions()
-        # self.monthly_toxics   = self.calculate_monthly_toxics()
-        # self.monthly_emis_h2s = None
+        self.monthly_emis     = self.calculate_monthly_equip_emissions()
+        self.monthly_toxics   = self.calculate_monthly_toxics()
+        self.monthly_emis_h2s = None
 
     # emissions calc methods override parent methods
     def calculate_monthly_equip_emissions(self):
@@ -2055,37 +2061,43 @@ class MonthlyH2Plant(AnnualH2Plant):
                         monthly.loc[fuel_type+pol] = (EF_multiplier
                                         * self.equip_EF[self.unit_key][pol]
                                         * self.get_conversion_multiplier(pol, fuel_type))
+        for pol in ['nox', 'co', 'so2', 'voc', 'pm']:
+            self._combine_emis_from_fuels(monthly, pol)
+
+        monthly.loc['equipment'] = self.unit_key
+        monthly.loc['month']     = self.month
+        monthly.loc['fuel_rfg']  = monthly.loc['PSA_mscf']
+        monthly.loc['fuel_ng']   = monthly.loc['NG_mscf']
+        monthly.loc['pm25']      = monthly.loc['pm']
+        monthly.loc['pm10']      = monthly.loc['pm']
+        monthly.loc['h2so4']     = monthly.loc['so2'] * 0.026
+        monthly = monthly.reindex(self.col_name_order)
+        monthly.loc[self.col_name_order[4:-1]] = (
+        monthly.loc[self.col_name_order[4:-1]] / 2000) # lbs --> tons
         return monthly
 
+    @staticmethod
+    def _combine_emis_from_fuels(ser, pol):
+        """Combine emissions from both fuel types, add row to series."""
+        ser.loc[pol] = (ser.loc['NG_'+pol] + ser.loc['PSA_'+pol])
+
     def get_conversion_multiplier(self, pol, fuel_type):
-        """Rrturn float multiplier for unit conversion."""
+        """Return float multiplier for unit conversion."""
         if fuel_type == 'NG_':
             HHV = self.HHV_NG
         elif fuel_type == 'PSA_':
             HHV = self.HHV_PSA
 
         if (self.EFunits.loc[self.unit_key]
-            .loc[pol].loc['units'] == 'lb/mmbtu'):
+                        .loc[pol]
+                        .loc['units'] == 'lb/mmbtu'):
             return 1/1000 * HHV
         elif (self.EFunits.loc[self.unit_key]
-            .loc[pol].loc['units'] == 'lb/mmscf'):
+                          .loc[pol]
+                          .loc['units'] == 'lb/mmscf'):
             return 1/1000
         else:
             raise ValueError('Emission Factor in unexpected units.')
-
-
-    #     set other values in series
-    #     monthly.loc['equipment'] = self.unit_key
-    #     monthly.loc['month']     = self.month
-    #     monthly.loc['fuel_rfg']  = monthly.loc['PSA_mscf']
-    #     monthly.loc['fuel_ng']   = monthly.loc['NG_mscf']
-    #     monthly.loc['pm25']      = monthly.loc['pm']
-    #     monthly.loc['pm10']      = monthly.loc['pm']
-    #     monthly.loc['h2so4']     = monthly.loc['so2'] * 0.026
-    #     monthly = monthly.reindex(self.col_name_order)
-    #     monthly.loc[self.col_name_order[4:-1]] = (
-    #         monthly.loc[self.col_name_order[4:-1]] / 2000) # lbs --> tons
-    #     return monthly
     
     def convert_from_ppm(self):
         stack = self.get_monthly_PSAstack().copy()
