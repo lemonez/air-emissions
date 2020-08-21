@@ -193,7 +193,7 @@ class AnnualEquipment(object):
         
         efs['unit_key'] = efs['unit_id'] # for Python unit ID
         
-        # map BP IDs to Python IDs
+        # map IDs to Python IDs
         efs = efs.replace({'unit_key': self.unitID_equip})
                           #,'unit_name':equip_name_map})
     # begin temporary workaround   
@@ -1644,7 +1644,7 @@ class MonthlyCoker_CO2(AnnualCoker_CO2):
             Q         = hourly average stack gas volumetric flow rate (scf/hr)
 
         (iii) If the CO2 concentration is measured on a dry basis, a correction for
-              the stack gas moisture content is required {confirmed with BP that the CO2 CEMS does measure on a dry basis}:
+              the stack gas moisture content is required {confirmed that the CO2 CEMS does measure on a dry basis}:
               
             CO2* = CO2 * ( (100-%H2O) / 100)               (Equation C-7)
 
