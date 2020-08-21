@@ -12,7 +12,6 @@ tool to calculate refinery emissions for government reporting
     summary results are written to CSVs in './output/'.
 
 2)  Run the following from the command line:
- $ calcbp.csh [-h]
  $ python3 __main.py__
  $ %run __main__.py # or run it this way from Jupyter
 
@@ -52,8 +51,7 @@ tool to calculate refinery emissions for government reporting
     parserClass.py  # wrapper module to calculate, format, and output emissions values
     ffactor.py      # calculations for refinery-fuel f-factors
     descrips.txt    # example data structures with explanations
-    raw_BP.ipynb    # Jupyter iPython Notebook; working notebook, contains qa and other functions
-    
+
 ./Data/...
     Static/                 # data that does not change monthly/annually (except with additions/modifications to equipment)
         (files)
